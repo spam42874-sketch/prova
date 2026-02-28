@@ -309,7 +309,7 @@
 <body>
 
 <header>
-  <div class="logo">SpeedLog</div>
+  <div class="logo">SpeedLog v0.1</div>
   <div class="gps-status">
     <div class="dot" id="gpsDot"></div>
     <span id="gpsLabel">GPS OFF</span>
@@ -363,19 +363,24 @@
 </div>
 
 <script>
-let watchId = null;
-let isTracking = false;
-let isRecording = false;
-let recordingStartTime = null;
-let lastSpeed = 0;
-let maxSpeedSession = 0;
-let lastRecordedKmh = null;
-let rafId = null;
+// ── State ───────────────────────────────────────────────────────────────────
+let watchId        = null;
+let isTracking     = false;
+let isRecording    = false;
 
-const speedData = []; // {kmh, time_ms}
-let thresholdKmh = 40;
+// Interpolation: we always keep the PREVIOUS GPS sample to interpolate between
+let prevGpsKmh     = null;   // speed in km/h at previous GPS fix
+let prevGpsTs      = null;   // pos.timestamp (ms) at previous GPS fix
 
-// Chart setup
+// Recording start is the interpolated moment we crossed the threshold
+let recordingStartTs = null; // pos.timestamp (ms) of threshold crossing
+
+let lastRecordedKmh = null;  // last integer km/h we have already saved
+let maxSpeedSession  = 0;
+
+const speedData = []; // { kmh: int, time_ms: float }  ← milliseconds, 3 decimals
+
+// ── Chart ────────────────────────────────────────────────────────────────────
 const ctx = document.getElementById('myChart').getContext('2d');
 const chart = new Chart(ctx, {
   type: 'line',
@@ -384,20 +389,18 @@ const chart = new Chart(ctx, {
       label: 'Velocità',
       data: [],
       borderColor: '#00e5ff',
-      backgroundColor: 'rgba(0,229,255,0.08)',
-      borderWidth: 2,
-      pointRadius: 4,
-      pointBackgroundColor: '#00e5ff',
-      pointBorderColor: '#0a0c0f',
-      pointBorderWidth: 2,
-      tension: 0.3,
+      backgroundColor: 'rgba(0,229,255,0.07)',
+      borderWidth: 2.5,
+      pointRadius: 0,        // ← nessun punto
+      pointHoverRadius: 4,
+      tension: 0.35,
       fill: true,
     }]
   },
   options: {
     responsive: true,
     maintainAspectRatio: false,
-    animation: { duration: 300 },
+    animation: { duration: 200 },
     plugins: {
       legend: { display: false },
       tooltip: {
@@ -408,24 +411,26 @@ const chart = new Chart(ctx, {
         borderWidth: 1,
         callbacks: {
           title: items => items[0].raw.y + ' km/h',
-          label: item => 'T+' + (item.raw.x / 1000).toFixed(3) + 's'
+          label: item  => 'T+ ' + (item.raw.x / 1000).toFixed(3) + 's'
         }
       }
     },
     scales: {
       x: {
         type: 'linear',
-        title: { display: true, text: 'Tempo (s)', color: '#5a5f72', font: { family: 'Share Tech Mono', size: 11 } },
-        grid: { color: 'rgba(37,40,48,0.8)' },
+        title: { display: true, text: 'Tempo (s)', color: '#5a5f72',
+                 font: { family: 'Share Tech Mono', size: 11 } },
+        grid: { color: 'rgba(37,40,48,0.9)' },
         ticks: {
           color: '#5a5f72',
           font: { family: 'Share Tech Mono', size: 10 },
-          callback: v => (v/1000).toFixed(1) + 's'
+          callback: v => (v / 1000).toFixed(1) + 's'
         }
       },
       y: {
-        title: { display: true, text: 'km/h', color: '#5a5f72', font: { family: 'Share Tech Mono', size: 11 } },
-        grid: { color: 'rgba(37,40,48,0.8)' },
+        title: { display: true, text: 'km/h', color: '#5a5f72',
+                 font: { family: 'Share Tech Mono', size: 11 } },
+        grid: { color: 'rgba(37,40,48,0.9)' },
         ticks: { color: '#5a5f72', font: { family: 'Share Tech Mono', size: 10 } },
         beginAtZero: false
       }
@@ -433,202 +438,13 @@ const chart = new Chart(ctx, {
   }
 });
 
+// ── Controls ──────────────────────────────────────────────────────────────────
 function startTracking() {
-  if (!navigator.geolocation) {
-    alert('Geolocalizzazione non supportata da questo browser.');
-    return;
-  }
+  if (!navigator.geolocation) { alert('Geolocalizzazione non supportata.'); return; }
   isTracking = true;
   document.getElementById('btnStart').style.display = 'none';
-  document.getElementById('btnStop').style.display = '';
-  document.getElementById('gpsDot').className = 'dot searching';
-  document.getElementById('gpsLabel').textContent = 'RICERCA...';
-
-  watchId = navigator.geolocation.watchPosition(
-    onPosition,
-    onError,
-    { enableHighAccuracy: true, maximumAge: 0, timeout: 5000 }
-  );
-
-  updateElapsed();
-}
-
-function stopTracking() {
-  isTracking = false;
-  isRecording = false;
-  if (watchId !== null) {
-    navigator.geolocation.clearWatch(watchId);
-    watchId = null;
-  }
-  cancelAnimationFrame(rafId);
-  document.getElementById('btnStart').style.display = '';
-  document.getElementById('btnStop').style.display = 'none';
-  document.getElementById('recBar').classList.remove('show');
-  document.getElementById('gpsDot').className = 'dot';
-  document.getElementById('gpsLabel').textContent = 'GPS OFF';
-}
-
-function clearData() {
-  speedData.length = 0;
-  maxSpeedSession = 0;
-  lastRecordedKmh = null;
-  isRecording = false;
-  recordingStartTime = null;
-  document.getElementById('recBar').classList.remove('show');
-  document.getElementById('maxSpeed').textContent = '0';
-  document.getElementById('maxBadge').textContent = 'MAX: — km/h';
-  chart.data.datasets[0].data = [];
-  chart.update();
-  renderLog();
-}
-
-let prevTimestamp = null;
-let prevSpeedMs = 0;
-
-function onPosition(pos) {
-  document.getElementById('gpsDot').className = 'dot active';
-  document.getElementById('gpsLabel').textContent = 'GPS LIVE';
-
-  const speedMs = pos.coords.speed || 0;
-  const speedKmh = speedMs * 3.6;
-  thresholdKmh = parseFloat(document.getElementById('thresholdInput').value) || 40;
-
-  // Acceleration estimate
-  const now = pos.timestamp;
-  let acc = '—';
-  if (prevTimestamp !== null) {
-    const dt = (now - prevTimestamp) / 1000;
-    if (dt > 0) acc = ((speedMs - prevSpeedMs) / dt).toFixed(1);
-  }
-  prevTimestamp = now;
-  prevSpeedMs = speedMs;
-
-  // Update display
-  const kmhInt = Math.round(speedKmh);
-  const el = document.getElementById('speedNum');
-  el.textContent = kmhInt;
-  el.className = 'speed-num' + (speedKmh >= thresholdKmh && isRecording ? ' above-threshold' : '');
-  document.getElementById('accVal').textContent = acc;
-
-  if (speedKmh > maxSpeedSession) {
-    maxSpeedSession = speedKmh;
-    document.getElementById('maxSpeed').textContent = Math.round(maxSpeedSession);
-    document.getElementById('maxBadge').textContent = 'MAX: ' + Math.round(maxSpeedSession) + ' km/h';
-  }
-
-  lastSpeed = speedKmh;
-
-  // Recording logic
-  if (!isRecording && speedKmh >= thresholdKmh) {
-    // Start recording
-    isRecording = true;
-    recordingStartTime = pos.timestamp;
-    lastRecordedKmh = Math.floor(thresholdKmh);
-    document.getElementById('recBar').classList.add('show');
-    document.getElementById('recThresh').textContent = thresholdKmh;
-    document.getElementById('recMax').textContent = '0';
-
-    // Record threshold crossing
-    const elapsed = 0;
-    addDataPoint(Math.floor(speedKmh), elapsed);
-    lastRecordedKmh = Math.floor(speedKmh);
-  }
-
-  if (isRecording) {
-    const elapsed = pos.timestamp - recordingStartTime;
-    const currentKmhFloor = Math.floor(speedKmh);
-
-    // Record each new kmh integer reached
-    if (currentKmhFloor > lastRecordedKmh) {
-      for (let k = lastRecordedKmh + 1; k <= currentKmhFloor; k++) {
-        addDataPoint(k, elapsed);
-      }
-      lastRecordedKmh = currentKmhFloor;
-    }
-
-    document.getElementById('recMax').textContent = Math.round(maxSpeedSession);
-
-    // Stop recording if speed drops well below threshold
-    if (speedKmh < thresholdKmh - 5) {
-      isRecording = false;
-    }
-  }
-}
-
-function addDataPoint(kmh, elapsed_ms) {
-  speedData.push({ kmh, time_ms: elapsed_ms });
-  chart.data.datasets[0].data.push({ x: elapsed_ms, y: kmh });
-  chart.update('none');
-  renderLog();
-}
-
-function updateElapsed() {
-  if (!isTracking) return;
-  if (isRecording && recordingStartTime !== null) {
-    const elapsed = performance.now() - (performance.now() - (Date.now() - recordingStartTime));
-    // Use simple approach
-    const t = ((Date.now()) - recordingStartTime);
-    document.getElementById('elapsedTime').textContent = (t > 0 ? (t/1000).toFixed(3) : '0.000') + 's';
-  } else {
-    document.getElementById('elapsedTime').textContent = '—';
-  }
-  rafId = requestAnimationFrame(updateElapsed);
-}
-
-// Better elapsed using Date.now
-let _startWall = null;
-function onPosition2(pos) {} // unused
-
-function renderLog() {
-  const panel = document.getElementById('logPanel');
-  if (speedData.length === 0) {
-    panel.innerHTML = '<div class="log-empty" id="logEmpty">nessun dato registrato</div>';
-    return;
-  }
-  let html = '';
-  for (let i = 0; i < speedData.length; i++) {
-    const d = speedData[i];
-    const delta = i === 0 ? 0 : d.time_ms - speedData[i-1].time_ms;
-    html += `<div class="log-row">
-      <div class="log-kmh">${d.kmh} km/h</div>
-      <div class="log-time">T+ ${(d.time_ms/1000).toFixed(3)}s</div>
-      <div class="log-delta">${i===0 ? '—' : '+' + (delta/1000).toFixed(3) + 's'}</div>
-    </div>`;
-  }
-  panel.innerHTML = html;
-  panel.scrollTop = panel.scrollHeight;
-}
-
-function onError(err) {
-  document.getElementById('gpsDot').className = 'dot';
-  document.getElementById('gpsLabel').textContent = 'ERRORE';
-  console.warn('GPS error', err);
-}
-
-// Update elapsed display in RAF loop more accurately
-function startElapsedLoop() {
-  function loop() {
-    if (!isTracking) return;
-    if (isRecording && recordingStartTime !== null) {
-      const t = Date.now() - recordingStartTime;
-      document.getElementById('elapsedTime').textContent = (t/1000).toFixed(3) + 's';
-    }
-    requestAnimationFrame(loop);
-  }
-  requestAnimationFrame(loop);
-}
-
-// Override the updateElapsed to use the loop above
-cancelAnimationFrame(rafId);
-function startTracking() {
-  if (!navigator.geolocation) {
-    alert('Geolocalizzazione non supportata.');
-    return;
-  }
-  isTracking = true;
-  document.getElementById('btnStart').style.display = 'none';
-  document.getElementById('btnStop').style.display = '';
-  document.getElementById('gpsDot').className = 'dot searching';
+  document.getElementById('btnStop').style.display  = '';
+  document.getElementById('gpsDot').className  = 'dot searching';
   document.getElementById('gpsLabel').textContent = 'RICERCA...';
 
   watchId = navigator.geolocation.watchPosition(onPosition, onError, {
@@ -637,7 +453,168 @@ function startTracking() {
     timeout: 10000
   });
 
-  startElapsedLoop();
+  elapsedLoop();
+}
+
+function stopTracking() {
+  isTracking  = false;
+  isRecording = false;
+  if (watchId !== null) { navigator.geolocation.clearWatch(watchId); watchId = null; }
+  document.getElementById('btnStart').style.display = '';
+  document.getElementById('btnStop').style.display  = 'none';
+  document.getElementById('recBar').classList.remove('show');
+  document.getElementById('gpsDot').className  = 'dot';
+  document.getElementById('gpsLabel').textContent = 'GPS OFF';
+}
+
+function clearData() {
+  speedData.length  = 0;
+  maxSpeedSession   = 0;
+  lastRecordedKmh   = null;
+  isRecording       = false;
+  recordingStartTs  = null;
+  prevGpsKmh        = null;
+  prevGpsTs         = null;
+  document.getElementById('recBar').classList.remove('show');
+  document.getElementById('maxSpeed').textContent  = '0';
+  document.getElementById('maxBadge').textContent  = 'MAX: — km/h';
+  chart.data.datasets[0].data = [];
+  chart.update();
+  renderLog();
+}
+
+// ── GPS callback ──────────────────────────────────────────────────────────────
+function onPosition(pos) {
+  document.getElementById('gpsDot').className  = 'dot active';
+  document.getElementById('gpsLabel').textContent = 'GPS LIVE';
+
+  const curKmh  = (pos.coords.speed || 0) * 3.6;
+  const curTs   = pos.timestamp;                  // ms, from GPS epoch
+  const thresh  = parseFloat(document.getElementById('thresholdInput').value) || 40;
+
+  // ── display ──
+  const el = document.getElementById('speedNum');
+  el.textContent  = Math.round(curKmh);
+  el.className    = 'speed-num' + (isRecording ? ' above-threshold' : '');
+
+  // acceleration
+  if (prevGpsTs !== null) {
+    const dt  = (curTs - prevGpsTs) / 1000;
+    const acc = dt > 0 ? (((curKmh - prevGpsKmh) / 3.6) / dt).toFixed(2) : '—';
+    document.getElementById('accVal').textContent = acc;
+  }
+
+  if (curKmh > maxSpeedSession) {
+    maxSpeedSession = curKmh;
+    document.getElementById('maxSpeed').textContent = Math.round(maxSpeedSession);
+    document.getElementById('maxBadge').textContent = 'MAX: ' + Math.round(maxSpeedSession) + ' km/h';
+  }
+
+  // ── interpolation helper ──────────────────────────────────────────────────
+  // Returns the exact pos.timestamp (ms) when speed crossed targetKmh,
+  // interpolating linearly between (prevGpsTs, prevGpsKmh) and (curTs, curKmh).
+  function interpolateTs(targetKmh) {
+    if (prevGpsKmh === null || prevGpsKmh === curKmh) return curTs;
+    const ratio = (targetKmh - prevGpsKmh) / (curKmh - prevGpsKmh);
+    return prevGpsTs + ratio * (curTs - prevGpsTs);
+  }
+
+  // ── recording state machine ───────────────────────────────────────────────
+  if (!isRecording) {
+    // Did we cross the threshold between the previous fix and this one?
+    const crossedUp = prevGpsKmh !== null && prevGpsKmh < thresh && curKmh >= thresh;
+    const alreadyAbove = prevGpsKmh === null && curKmh >= thresh;
+
+    if (crossedUp || alreadyAbove) {
+      isRecording     = true;
+      // Exact crossing timestamp via interpolation
+      recordingStartTs = crossedUp ? interpolateTs(thresh) : curTs;
+      lastRecordedKmh  = Math.floor(thresh);
+
+      document.getElementById('recBar').classList.add('show');
+      document.getElementById('recThresh').textContent = thresh;
+      document.getElementById('recMax').textContent    = '0';
+
+      // Record the threshold crossing itself (t = 0.000)
+      addDataPoint(Math.floor(thresh), 0);
+      lastRecordedKmh = Math.floor(thresh);
+    }
+  }
+
+  if (isRecording) {
+    document.getElementById('recMax').textContent = Math.round(maxSpeedSession);
+
+    // For each integer km/h we just swept through, compute its exact crossing time
+    const curFloor = Math.floor(curKmh);
+    if (curFloor > lastRecordedKmh) {
+      for (let k = lastRecordedKmh + 1; k <= curFloor; k++) {
+        // Interpolate the exact timestamp when speed == k km/h
+        const crossTs   = interpolateTs(k);
+        const elapsed   = crossTs - recordingStartTs;  // ms, float
+        addDataPoint(k, elapsed);
+      }
+      lastRecordedKmh = curFloor;
+    }
+
+    // Auto-stop if we drop 5 km/h below threshold
+    if (curKmh < thresh - 5) {
+      isRecording = false;
+    }
+  }
+
+  // Save previous sample for next interpolation
+  prevGpsKmh = curKmh;
+  prevGpsTs  = curTs;
+}
+
+// ── Add data point ────────────────────────────────────────────────────────────
+function addDataPoint(kmh, elapsed_ms) {
+  // elapsed_ms comes from GPS timestamps → millisecond precision, 3 decimal places
+  speedData.push({ kmh, time_ms: elapsed_ms });
+  chart.data.datasets[0].data.push({ x: elapsed_ms, y: kmh });
+  chart.update('none');
+  renderLog();
+}
+
+// ── Elapsed display (RAF loop) ────────────────────────────────────────────────
+function elapsedLoop() {
+  if (!isTracking) return;
+  if (isRecording && recordingStartTs !== null) {
+    // We use Date.now() as a wall-clock proxy; GPS timestamps track this well
+    const t = Date.now() - recordingStartTs;
+    document.getElementById('elapsedTime').textContent = (t / 1000).toFixed(3) + 's';
+  } else {
+    document.getElementById('elapsedTime').textContent = '—';
+  }
+  requestAnimationFrame(elapsedLoop);
+}
+
+// ── Log render ────────────────────────────────────────────────────────────────
+function renderLog() {
+  const panel = document.getElementById('logPanel');
+  if (speedData.length === 0) {
+    panel.innerHTML = '<div class="log-empty">nessun dato registrato</div>';
+    return;
+  }
+  let html = '';
+  for (let i = 0; i < speedData.length; i++) {
+    const d     = speedData[i];
+    const delta = i === 0 ? null : d.time_ms - speedData[i - 1].time_ms;
+    html += `<div class="log-row">
+      <div class="log-kmh">${d.kmh} km/h</div>
+      <div class="log-time">T+ ${(d.time_ms / 1000).toFixed(3)}s</div>
+      <div class="log-delta">${delta === null ? '—' : '+' + (delta / 1000).toFixed(3) + 's'}</div>
+    </div>`;
+  }
+  panel.innerHTML = html;
+  panel.scrollTop = panel.scrollHeight;
+}
+
+// ── Error handler ─────────────────────────────────────────────────────────────
+function onError(err) {
+  document.getElementById('gpsDot').className  = 'dot';
+  document.getElementById('gpsLabel').textContent = 'ERRORE';
+  console.warn('GPS error', err.code, err.message);
 }
 </script>
 
