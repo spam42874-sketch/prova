@@ -59,19 +59,11 @@
     color: var(--muted);
   }
 
-  .dot {
-    width: 8px; height: 8px;
-    border-radius: 50%;
-    background: var(--muted);
-    transition: background 0.3s;
-  }
-  .dot.active { background: var(--green); box-shadow: 0 0 8px var(--green); animation: pulse 1.5s infinite; }
-  .dot.searching { background: var(--accent2); animation: pulse 0.6s infinite; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); transition: background 0.3s; }
+  .dot.active   { background: var(--green); box-shadow: 0 0 8px var(--green); animation: pulse 1.5s infinite; }
+  .dot.searching{ background: var(--accent2); animation: pulse 0.6s infinite; }
 
-  @keyframes pulse {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.4; }
-  }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
 
   .main {
     flex: 1;
@@ -82,11 +74,7 @@
     gap: 12px;
   }
 
-  /* Speedometer */
-  .speed-display {
-    text-align: center;
-    position: relative;
-  }
+  .speed-display { text-align: center; }
 
   .speed-num {
     font-family: 'Share Tech Mono', monospace;
@@ -96,15 +84,9 @@
     text-shadow: 0 0 30px rgba(0,229,255,0.5);
     transition: color 0.2s;
   }
-
   .speed-num.above-threshold { color: var(--green); text-shadow: 0 0 30px rgba(0,255,136,0.5); }
 
-  .speed-unit {
-    font-size: 18px;
-    letter-spacing: 3px;
-    color: var(--muted);
-    font-weight: 600;
-  }
+  .speed-unit { font-size: 18px; letter-spacing: 3px; color: var(--muted); font-weight: 600; }
 
   .speed-meta {
     display: flex;
@@ -115,16 +97,9 @@
     font-family: 'Share Tech Mono', monospace;
     color: var(--muted);
   }
-
   .speed-meta span { color: var(--text); }
 
-  /* Controls row */
-  .controls {
-    display: flex;
-    gap: 10px;
-    align-items: stretch;
-    flex-shrink: 0;
-  }
+  .controls { display: flex; gap: 10px; align-items: stretch; flex-shrink: 0; }
 
   .threshold-group {
     display: flex;
@@ -136,105 +111,60 @@
     padding: 8px 12px;
     flex: 1;
   }
-
-  .threshold-group label {
-    font-size: 12px;
-    letter-spacing: 2px;
-    color: var(--muted);
-    white-space: nowrap;
-  }
-
+  .threshold-group label { font-size: 12px; letter-spacing: 2px; color: var(--muted); white-space: nowrap; }
   .threshold-group input {
-    background: transparent;
-    border: none;
-    color: var(--accent2);
-    font-family: 'Share Tech Mono', monospace;
-    font-size: 20px;
-    width: 60px;
-    text-align: center;
-    outline: none;
+    background: transparent; border: none;
+    color: var(--accent2); font-family: 'Share Tech Mono', monospace;
+    font-size: 20px; width: 60px; text-align: center; outline: none;
   }
-
   .threshold-group input::-webkit-inner-spin-button,
   .threshold-group input::-webkit-outer-spin-button { -webkit-appearance: none; }
 
   .btn {
-    padding: 10px 18px;
-    border: 1px solid;
-    border-radius: 8px;
-    font-family: 'Rajdhani', sans-serif;
-    font-size: 14px;
-    font-weight: 700;
-    letter-spacing: 2px;
-    cursor: pointer;
-    text-transform: uppercase;
-    transition: all 0.15s;
-    flex-shrink: 0;
+    padding: 10px 18px; border: 1px solid; border-radius: 8px;
+    font-family: 'Rajdhani', sans-serif; font-size: 14px; font-weight: 700;
+    letter-spacing: 2px; cursor: pointer; text-transform: uppercase;
+    transition: all 0.15s; flex-shrink: 0;
   }
-
-  .btn-start {
-    background: rgba(0,255,136,0.1);
-    border-color: var(--green);
-    color: var(--green);
-  }
-  .btn-start:hover, .btn-start.active {
-    background: var(--green);
-    color: var(--bg);
-    box-shadow: 0 0 20px rgba(0,255,136,0.4);
-  }
-
-  .btn-stop {
-    background: rgba(255,51,102,0.1);
-    border-color: var(--red);
-    color: var(--red);
-  }
-  .btn-stop:hover {
-    background: var(--red);
-    color: #fff;
-    box-shadow: 0 0 20px rgba(255,51,102,0.4);
-  }
-
-  .btn-clear {
-    background: rgba(90,95,114,0.1);
-    border-color: var(--muted);
-    color: var(--muted);
-    font-size: 12px;
-    padding: 10px 12px;
-  }
+  .btn-start { background: rgba(0,255,136,0.1); border-color: var(--green); color: var(--green); }
+  .btn-start:hover { background: var(--green); color: var(--bg); box-shadow: 0 0 20px rgba(0,255,136,0.4); }
+  .btn-stop  { background: rgba(255,51,102,0.1); border-color: var(--red); color: var(--red); }
+  .btn-stop:hover { background: var(--red); color: #fff; box-shadow: 0 0 20px rgba(255,51,102,0.4); }
+  .btn-clear { background: rgba(90,95,114,0.1); border-color: var(--muted); color: var(--muted); font-size: 12px; padding: 10px 12px; }
   .btn-clear:hover { border-color: var(--text); color: var(--text); }
 
-  /* Recording indicator */
   .rec-bar {
-    display: none;
-    align-items: center;
-    gap: 10px;
+    display: none; align-items: center; gap: 10px;
     padding: 8px 12px;
-    background: rgba(0,255,136,0.05);
-    border: 1px solid rgba(0,255,136,0.2);
-    border-radius: 8px;
-    flex-shrink: 0;
-    font-family: 'Share Tech Mono', monospace;
-    font-size: 13px;
+    background: rgba(0,255,136,0.05); border: 1px solid rgba(0,255,136,0.2);
+    border-radius: 8px; flex-shrink: 0;
+    font-family: 'Share Tech Mono', monospace; font-size: 13px;
   }
   .rec-bar.show { display: flex; }
-
-  .rec-dot {
-    width: 8px; height: 8px;
-    border-radius: 50%;
-    background: var(--red);
-    animation: pulse 0.8s infinite;
-    flex-shrink: 0;
-  }
-
+  .rec-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--red); animation: pulse 0.8s infinite; flex-shrink: 0; }
   .rec-info { color: var(--muted); flex: 1; }
   .rec-info span { color: var(--green); }
+  .elapsed { font-size: 20px; color: var(--accent); }
 
-  .elapsed {
-    font-size: 20px;
-    color: var(--accent);
+  /* run selector tabs */
+  .run-tabs {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    flex-shrink: 0;
   }
+  .run-tab {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 11px;
+    padding: 3px 10px;
+    border-radius: 4px;
+    border: 1px solid;
+    cursor: pointer;
+    transition: all 0.15s;
+    opacity: 0.5;
+  }
+  .run-tab.active { opacity: 1; }
 
-  /* Chart */
   .chart-container {
     flex: 1;
     background: var(--surface);
@@ -244,72 +174,40 @@
     min-height: 0;
     position: relative;
   }
-
-  .chart-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 8px;
-  }
-
-  .chart-title {
-    font-size: 12px;
-    letter-spacing: 3px;
-    color: var(--muted);
-  }
-
+  .chart-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+  .chart-title  { font-size: 12px; letter-spacing: 3px; color: var(--muted); }
   .max-badge {
-    font-family: 'Share Tech Mono', monospace;
-    font-size: 12px;
-    color: var(--accent2);
-    background: rgba(255,107,53,0.1);
-    border: 1px solid rgba(255,107,53,0.3);
-    border-radius: 4px;
-    padding: 2px 8px;
+    font-family: 'Share Tech Mono', monospace; font-size: 12px;
+    color: var(--accent2); background: rgba(255,107,53,0.1);
+    border: 1px solid rgba(255,107,53,0.3); border-radius: 4px; padding: 2px 8px;
   }
-
   canvas { max-height: 100%; }
 
-  /* Log table */
   .log-panel {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    flex-shrink: 0;
-    max-height: 120px;
-    overflow-y: auto;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 10px; flex-shrink: 0; max-height: 110px; overflow-y: auto;
   }
-
   .log-panel::-webkit-scrollbar { width: 4px; }
   .log-panel::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
 
   .log-row {
-    display: flex;
-    padding: 5px 12px;
+    display: flex; padding: 5px 12px;
     border-bottom: 1px solid rgba(37,40,48,0.5);
-    font-family: 'Share Tech Mono', monospace;
-    font-size: 12px;
-    gap: 12px;
-    align-items: center;
+    font-family: 'Share Tech Mono', monospace; font-size: 12px;
+    gap: 12px; align-items: center;
   }
   .log-row:last-child { border-bottom: none; }
-
-  .log-kmh { color: var(--accent); width: 55px; }
-  .log-time { color: var(--green); flex: 1; }
+  .log-run   { width: 46px; font-weight: 700; }
+  .log-kmh   { color: var(--accent); width: 55px; }
+  .log-time  { color: var(--green); flex: 1; }
   .log-delta { color: var(--muted); }
-  .log-empty {
-    padding: 16px;
-    text-align: center;
-    color: var(--muted);
-    font-size: 13px;
-    letter-spacing: 2px;
-  }
+  .log-empty { padding: 16px; text-align: center; color: var(--muted); font-size: 13px; letter-spacing: 2px; }
 </style>
 </head>
 <body>
 
 <header>
-  <div class="logo">SpeedLog v0.3</div>
+  <div class="logo">SpeedLog v0.4</div>
   <div class="gps-status">
     <div class="dot" id="gpsDot"></div>
     <span id="gpsLabel">GPS OFF</span>
@@ -318,7 +216,6 @@
 
 <div class="main">
 
-  <!-- Speed display -->
   <div class="speed-display">
     <div class="speed-num" id="speedNum">0</div>
     <div class="speed-unit">KM/H</div>
@@ -327,7 +224,6 @@
     </div>
   </div>
 
-  <!-- Controls -->
   <div class="controls">
     <div class="threshold-group">
       <label>SOGLIA</label>
@@ -335,18 +231,19 @@
       <label style="color:var(--muted);font-size:11px;">km/h</label>
     </div>
     <button class="btn btn-start" id="btnStart" onclick="startTracking()">▶ START</button>
-    <button class="btn btn-stop" id="btnStop" onclick="stopTracking()" style="display:none">■ STOP</button>
+    <button class="btn btn-stop"  id="btnStop"  onclick="stopTracking()"  style="display:none">■ STOP</button>
     <button class="btn btn-clear" onclick="clearData()">↺</button>
   </div>
 
-  <!-- Recording bar -->
   <div class="rec-bar" id="recBar">
     <div class="rec-dot"></div>
     <div class="rec-info">REC &nbsp;|&nbsp; soglia <span id="recThresh">40</span> km/h &nbsp;|&nbsp; picco <span id="recMax">0</span> km/h</div>
     <div class="elapsed" id="elapsedTime">0.000s</div>
   </div>
 
-  <!-- Chart -->
+  <!-- run filter tabs (appear as runs accumulate) -->
+  <div class="run-tabs" id="runTabs" style="display:none"></div>
+
   <div class="chart-container">
     <div class="chart-header">
       <div class="chart-title">VELOCITÀ / TEMPO</div>
@@ -355,14 +252,26 @@
     <canvas id="myChart"></canvas>
   </div>
 
-  <!-- Log -->
   <div class="log-panel" id="logPanel">
-    <div class="log-empty" id="logEmpty">nessun dato registrato</div>
+    <div class="log-empty">nessun dato registrato</div>
   </div>
 
 </div>
 
 <script>
+// ═══════════════════════════════════════════════════════════════════════════════
+// CONSTANTS
+// ═══════════════════════════════════════════════════════════════════════════════
+const RUN_COLORS = [
+  '#00e5ff','#00ff88','#ff6b35','#c77dff','#ffce00',
+  '#ff3366','#4fc3f7','#a5d6a7','#ffab91','#b39ddb'
+];
+
+function hexToRgba(hex, a) {
+  const r=parseInt(hex.slice(1,3),16), g=parseInt(hex.slice(3,5),16), b=parseInt(hex.slice(5,7),16);
+  return `rgba(${r},${g},${b},${a})`;
+}
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // STATE
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -370,93 +279,75 @@ let watchId          = null;
 let isTracking       = false;
 let isRecording      = false;
 
-let prevGpsKmh       = null;   // km/h at previous GPS fix
-let prevGpsTs        = null;   // pos.timestamp (ms) at previous GPS fix
-
-let recordingStartTs = null;   // interpolated timestamp (ms) when threshold was crossed
-let lastRecordedKmh  = null;   // last INTEGER km/h saved to log
+let prevGpsKmh       = null;
+let prevGpsTs        = null;
+let recordingStartTs = null;
+let lastRecordedKmh  = null;
 let maxSpeedSession  = 0;
 
-// LOG: only integer km/h crossings (displayed in the table)
-const speedData = [];          // { kmh: int, time_ms: float }
-
-// CHART: every point we want to draw — GPS raw samples + interpolated crossings
-// Each entry: { x: elapsed_ms, y: kmh_float, type: 'raw'|'cross' }
-const chartPoints = [];
+// runs[i] = { color, logPoints: [{kmh,time_ms}], chartPoints: [{x,y}] }
+const runs = [];
+let activeRunIdx = null;   // which run is shown in the log (null = all)
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// CHART SETUP
+// CHART
 // ═══════════════════════════════════════════════════════════════════════════════
-const ctx = document.getElementById('myChart').getContext('2d');
+const ctx   = document.getElementById('myChart').getContext('2d');
 const chart = new Chart(ctx, {
   type: 'line',
-  data: {
-    datasets: [{
-      label: 'Velocità',
-      data: [],
-      borderColor: '#00e5ff',
-      backgroundColor: (context) => {
-        const c = context.chart.ctx;
-        const g = c.createLinearGradient(0, 0, 0, context.chart.height);
-        g.addColorStop(0,   'rgba(0,229,255,0.18)');
-        g.addColorStop(1,   'rgba(0,229,255,0.00)');
-        return g;
-      },
-      borderWidth: 2.5,
-      pointRadius: 0,
-      pointHoverRadius: 5,
-      pointHoverBackgroundColor: '#00e5ff',
-      tension: 0,           // ← 0 = linea spezzata esatta, nessuna interpolazione cubica
-      fill: true,
-    }]
-  },
+  data: { datasets: [] },
   options: {
     responsive: true,
     maintainAspectRatio: false,
-    animation: false,         // disabilitata per massima reattività
+    animation: false,
     plugins: {
-      legend: { display: false },
+      legend: {
+        display: true,
+        labels: { color:'#5a5f72', font:{family:'Share Tech Mono',size:10}, boxWidth:14, padding:8 }
+      },
       tooltip: {
-        mode: 'index',
-        intersect: false,
-        backgroundColor: '#1a1d24',
-        titleColor: '#00e5ff',
-        bodyColor: '#e8eaf0',
-        borderColor: '#252830',
-        borderWidth: 1,
+        mode: 'nearest', intersect: false,
+        backgroundColor:'#1a1d24', titleColor:'#00e5ff',
+        bodyColor:'#e8eaf0', borderColor:'#252830', borderWidth:1,
         callbacks: {
           title: items => items[0].raw.y.toFixed(2) + ' km/h',
-          label: item  => 'T+ ' + (item.raw.x / 1000).toFixed(3) + 's'
+          label: item  => item.dataset.label + '  T+ ' + (item.raw.x/1000).toFixed(3) + 's'
         }
       }
     },
     scales: {
       x: {
-        type: 'linear',
-        title: { display: true, text: 'Tempo (s)', color: '#5a5f72',
-                 font: { family: 'Share Tech Mono', size: 11 } },
-        grid: { color: 'rgba(37,40,48,0.9)' },
-        ticks: {
-          color: '#5a5f72',
-          font: { family: 'Share Tech Mono', size: 10 },
-          maxTicksLimit: 8,
-          callback: v => (v / 1000).toFixed(1) + 's'
-        }
+        type:'linear',
+        title:{display:true,text:'Tempo (s)',color:'#5a5f72',font:{family:'Share Tech Mono',size:11}},
+        grid:{color:'rgba(37,40,48,0.9)'},
+        ticks:{color:'#5a5f72',font:{family:'Share Tech Mono',size:10},maxTicksLimit:8,
+               callback: v => (v/1000).toFixed(1)+'s'}
       },
       y: {
-        title: { display: true, text: 'km/h', color: '#5a5f72',
-                 font: { family: 'Share Tech Mono', size: 11 } },
-        grid: { color: 'rgba(37,40,48,0.9)' },
-        ticks: {
-          color: '#5a5f72',
-          font: { family: 'Share Tech Mono', size: 10 },
-          stepSize: 5
-        },
-        beginAtZero: false
+        title:{display:true,text:'km/h',color:'#5a5f72',font:{family:'Share Tech Mono',size:11}},
+        grid:{color:'rgba(37,40,48,0.9)'},
+        ticks:{color:'#5a5f72',font:{family:'Share Tech Mono',size:10},stepSize:5},
+        beginAtZero:false
       }
     }
   }
 });
+
+function makeDataset(runIdx) {
+  const color = RUN_COLORS[runIdx % RUN_COLORS.length];
+  return {
+    label: 'Run ' + (runIdx+1),
+    data: [],
+    borderColor: color,
+    backgroundColor: hexToRgba(color, 0.06),
+    borderWidth: 2.5,
+    pointRadius: 0,
+    pointHoverRadius: 5,
+    pointHoverBackgroundColor: color,
+    tension: 0,
+    fill: false,
+  };
+}
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // CONTROLS
@@ -485,24 +376,26 @@ function stopTracking() {
 }
 
 function clearData() {
-  speedData.length  = 0;
-  chartPoints.length = 0;
+  runs.length       = 0;
   maxSpeedSession   = 0;
   lastRecordedKmh   = null;
   isRecording       = false;
   recordingStartTs  = null;
   prevGpsKmh        = null;
   prevGpsTs         = null;
+  activeRunIdx      = null;
   document.getElementById('recBar').classList.remove('show');
   document.getElementById('maxSpeed').textContent = '0';
   document.getElementById('maxBadge').textContent = 'MAX: — km/h';
-  chart.data.datasets[0].data = [];
+  document.getElementById('runTabs').style.display = 'none';
+  document.getElementById('runTabs').innerHTML = '';
+  chart.data.datasets = [];
   chart.update();
   renderLog();
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// GPS CALLBACK — core logic
+// GPS CALLBACK
 // ═══════════════════════════════════════════════════════════════════════════════
 function onPosition(pos) {
   document.getElementById('gpsDot').className     = 'dot active';
@@ -512,17 +405,15 @@ function onPosition(pos) {
   const curTs  = pos.timestamp;
   const thresh = parseFloat(document.getElementById('thresholdInput').value) || 40;
 
-  // ── display ────────────────────────────────────────────────────────────────
+  // display
   const el = document.getElementById('speedNum');
   el.textContent = Math.round(curKmh);
   el.className   = 'speed-num' + (isRecording ? ' above-threshold' : '');
 
   if (prevGpsTs !== null) {
-    const dt  = (curTs - prevGpsTs) / 1000;
-    if (dt > 0) {
-      const acc = ((curKmh - prevGpsKmh) / 3.6 / dt).toFixed(2);
-      document.getElementById('accVal').textContent = acc;
-    }
+    const dt = (curTs - prevGpsTs) / 1000;
+    if (dt > 0) document.getElementById('accVal').textContent =
+      ((curKmh - prevGpsKmh) / 3.6 / dt).toFixed(2);
   }
 
   if (curKmh > maxSpeedSession) {
@@ -531,16 +422,14 @@ function onPosition(pos) {
     document.getElementById('maxBadge').textContent = 'MAX: ' + Math.round(maxSpeedSession) + ' km/h';
   }
 
-  // ── interpolation helper ───────────────────────────────────────────────────
-  // Linear interpolation: returns the exact GPS timestamp (ms) when speed == targetKmh
-  // between the previous fix (prevGpsTs, prevGpsKmh) and this fix (curTs, curKmh).
+  // ── interpolation: exact timestamp when speed == targetKmh ────────────────
   function interpolateTs(targetKmh) {
     if (prevGpsKmh === null || curKmh === prevGpsKmh) return curTs;
     const ratio = (targetKmh - prevGpsKmh) / (curKmh - prevGpsKmh);
     return prevGpsTs + ratio * (curTs - prevGpsTs);
   }
 
-  // ── recording state machine ────────────────────────────────────────────────
+  // ── start a new run when crossing threshold upward ────────────────────────
   if (!isRecording) {
     const crossedUp    = prevGpsKmh !== null && prevGpsKmh < thresh && curKmh >= thresh;
     const alreadyAbove = prevGpsKmh === null && curKmh >= thresh;
@@ -550,69 +439,115 @@ function onPosition(pos) {
       recordingStartTs = crossedUp ? interpolateTs(thresh) : curTs;
       lastRecordedKmh  = Math.floor(thresh);
 
+      // Create new run object + chart dataset
+      const runIdx = runs.length;
+      const color  = RUN_COLORS[runIdx % RUN_COLORS.length];
+      runs.push({ color, logPoints: [], chartPoints: [] });
+      chart.data.datasets.push(makeDataset(runIdx));
+
+      addRunTab(runIdx, color);
+
       document.getElementById('recBar').classList.add('show');
       document.getElementById('recThresh').textContent = thresh;
       document.getElementById('recMax').textContent    = '0';
 
-      // First log entry: the threshold crossing at t=0
-      addLogPoint(Math.floor(thresh), 0);
-
-      // Add the interpolated threshold-crossing point to the chart
-      addChartPoint(thresh, 0, 'cross');
+      // Threshold crossing point: t = 0, y = thresh
+      addToRun(runIdx, thresh, 0, true);
     }
   }
 
   if (isRecording) {
+    const runIdx     = runs.length - 1;
+    const elapsedCur = curTs - recordingStartTs;
+
     document.getElementById('recMax').textContent = Math.round(maxSpeedSession);
 
-    const elapsedCur = curTs - recordingStartTs; // elapsed ms at this GPS fix
-
-    // ── 1. Add raw GPS sample only if speed is still increasing ──────────────
+    // Raw GPS sample — only if still accelerating
     if (prevGpsKmh === null || curKmh >= prevGpsKmh) {
-      addChartPoint(curKmh, elapsedCur, 'raw');
+      addToRun(runIdx, curKmh, elapsedCur, false);
     }
 
-    // ── 2. For every integer km/h crossed upward, insert interpolated point ──
+    // Interpolated integer crossings
     const curFloor = Math.floor(curKmh);
     if (curFloor > lastRecordedKmh) {
       for (let k = lastRecordedKmh + 1; k <= curFloor; k++) {
-        const crossTs = interpolateTs(k);
-        const elapsed = crossTs - recordingStartTs;
-        addLogPoint(k, elapsed);
-        addChartPoint(k, elapsed, 'cross');
+        const elapsed = interpolateTs(k) - recordingStartTs;
+        addToRun(runIdx, k, elapsed, true); // true = also log
       }
       lastRecordedKmh = curFloor;
     }
 
-    // ── 3. Rebuild chart sorted by time ──────────────────────────────────────
-    rebuildChart();
+    // Sync this run's dataset to chart and redraw
+    chart.data.datasets[runIdx].data = runs[runIdx].chartPoints
+      .slice()
+      .sort((a,b) => a.x - b.x);
+    chart.update('none');
 
-    // Auto-stop
-    if (curKmh < thresh - 5) isRecording = false;
+    // Auto-stop when speed drops below threshold
+    if (curKmh < thresh) {
+      isRecording = false;
+      document.getElementById('recBar').classList.remove('show');
+      document.getElementById('elapsedTime').textContent = '—';
+    }
   }
 
   prevGpsKmh = curKmh;
   prevGpsTs  = curTs;
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// DATA HELPERS
-// ═══════════════════════════════════════════════════════════════════════════════
-
-function addLogPoint(kmh, elapsed_ms) {
-  speedData.push({ kmh, time_ms: elapsed_ms });
-  renderLog();
+// ── Add a point to a run ──────────────────────────────────────────────────────
+// logToo=true  → also push to logPoints (integer crossings + threshold point)
+// logToo=false → chart only (raw GPS samples)
+function addToRun(runIdx, kmh, elapsed_ms, logToo) {
+  const run = runs[runIdx];
+  run.chartPoints.push({ x: elapsed_ms, y: kmh });
+  if (logToo) {
+    run.logPoints.push({ kmh: Math.round(kmh), time_ms: elapsed_ms });
+    renderLog();
+  }
 }
 
-function addChartPoint(kmh, elapsed_ms, type) {
-  chartPoints.push({ x: elapsed_ms, y: kmh, type });
+// ── Run selector tabs ─────────────────────────────────────────────────────────
+function addRunTab(runIdx, color) {
+  const tabs = document.getElementById('runTabs');
+  tabs.style.display = 'flex';
+
+  // "All" tab — create once
+  if (tabs.children.length === 0) {
+    const all = document.createElement('div');
+    all.className = 'run-tab active';
+    all.textContent = 'TUTTI';
+    all.style.borderColor = '#5a5f72';
+    all.style.color = '#5a5f72';
+    all.onclick = () => selectRun(null);
+    tabs.appendChild(all);
+  }
+
+  const tab = document.createElement('div');
+  tab.className   = 'run-tab';
+  tab.id          = 'tab-' + runIdx;
+  tab.textContent = 'Run ' + (runIdx+1);
+  tab.style.borderColor = color;
+  tab.style.color       = color;
+  tab.onclick = () => selectRun(runIdx);
+  tabs.appendChild(tab);
 }
 
-// Sort all points chronologically and push to Chart.js
-function rebuildChart() {
-  chartPoints.sort((a, b) => a.x - b.x);
-  chart.data.datasets[0].data = chartPoints.map(p => ({ x: p.x, y: p.y }));
+function selectRun(idx) {
+  activeRunIdx = idx;
+  // Update tab highlight
+  const tabs = document.getElementById('runTabs');
+  Array.from(tabs.children).forEach((t, i) => {
+    // i=0 is "TUTTI", i=1 is Run 0, etc.
+    const isActive = (idx === null && i === 0) || (idx !== null && i === idx + 1);
+    t.classList.toggle('active', isActive);
+  });
+  // Show/hide datasets
+  chart.data.datasets.forEach((ds, i) => {
+    ds.hidden = (idx !== null && i !== idx);
+  });
   chart.update('none');
+  renderLog();
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -622,9 +557,7 @@ function elapsedLoop() {
   if (!isTracking) return;
   if (isRecording && recordingStartTs !== null) {
     const t = Date.now() - recordingStartTs;
-    document.getElementById('elapsedTime').textContent = (t / 1000).toFixed(3) + 's';
-  } else {
-    document.getElementById('elapsedTime').textContent = '—';
+    document.getElementById('elapsedTime').textContent = (t/1000).toFixed(3) + 's';
   }
   requestAnimationFrame(elapsedLoop);
 }
@@ -634,19 +567,35 @@ function elapsedLoop() {
 // ═══════════════════════════════════════════════════════════════════════════════
 function renderLog() {
   const panel = document.getElementById('logPanel');
-  if (speedData.length === 0) {
+  // Collect points from the selected run(s)
+  let rows = [];
+  if (activeRunIdx !== null) {
+    runs[activeRunIdx]?.logPoints.forEach(p => rows.push({ ...p, runIdx: activeRunIdx }));
+  } else {
+    runs.forEach((r, i) => r.logPoints.forEach(p => rows.push({ ...p, runIdx: i })));
+  }
+
+  if (rows.length === 0) {
     panel.innerHTML = '<div class="log-empty">nessun dato registrato</div>';
     return;
   }
+
   let html = '';
-  for (let i = 0; i < speedData.length; i++) {
-    const d     = speedData[i];
-    const delta = i === 0 ? null : d.time_ms - speedData[i - 1].time_ms;
+  let prevTime = null, prevRun = null;
+  for (const row of rows) {
+    const color = RUN_COLORS[row.runIdx % RUN_COLORS.length];
+    const isNewRun = row.runIdx !== prevRun;
+    const delta = (!isNewRun && prevTime !== null)
+      ? '+' + ((row.time_ms - prevTime)/1000).toFixed(3) + 's'
+      : '—';
     html += `<div class="log-row">
-      <div class="log-kmh">${d.kmh} km/h</div>
-      <div class="log-time">T+ ${(d.time_ms / 1000).toFixed(3)}s</div>
-      <div class="log-delta">${delta === null ? '—' : '+' + (delta / 1000).toFixed(3) + 's'}</div>
+      <div class="log-run" style="color:${color}">R${row.runIdx+1}</div>
+      <div class="log-kmh">${row.kmh} km/h</div>
+      <div class="log-time">T+ ${(row.time_ms/1000).toFixed(3)}s</div>
+      <div class="log-delta">${delta}</div>
     </div>`;
+    prevTime = row.time_ms;
+    prevRun  = row.runIdx;
   }
   panel.innerHTML = html;
   panel.scrollTop = panel.scrollHeight;
