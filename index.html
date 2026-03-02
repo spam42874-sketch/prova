@@ -309,7 +309,7 @@
 <body>
 
 <header>
-  <div class="logo">SpeedLog v0.2</div>
+  <div class="logo">SpeedLog v0.3</div>
   <div class="gps-status">
     <div class="dot" id="gpsDot"></div>
     <span id="gpsLabel">GPS OFF</span>
@@ -567,25 +567,24 @@ function onPosition(pos) {
 
     const elapsedCur = curTs - recordingStartTs; // elapsed ms at this GPS fix
 
-    // ── 1. Add this raw GPS sample to the chart (precise timestamp) ──────────
-    addChartPoint(curKmh, elapsedCur, 'raw');
+    // ── 1. Add raw GPS sample only if speed is still increasing ──────────────
+    if (prevGpsKmh === null || curKmh >= prevGpsKmh) {
+      addChartPoint(curKmh, elapsedCur, 'raw');
+    }
 
-    // ── 2. For every integer km/h crossed between prev and cur,
-    //       insert an INTERPOLATED point at its exact crossing time ───────────
+    // ── 2. For every integer km/h crossed upward, insert interpolated point ──
     const curFloor = Math.floor(curKmh);
     if (curFloor > lastRecordedKmh) {
       for (let k = lastRecordedKmh + 1; k <= curFloor; k++) {
-        const crossTs  = interpolateTs(k);
-        const elapsed  = crossTs - recordingStartTs;
-        // Add to log (integer crossings only)
+        const crossTs = interpolateTs(k);
+        const elapsed = crossTs - recordingStartTs;
         addLogPoint(k, elapsed);
-        // Add interpolated point to chart (sits between the GPS raw samples)
         addChartPoint(k, elapsed, 'cross');
       }
       lastRecordedKmh = curFloor;
     }
 
-    // ── 3. Rebuild chart data sorted by time (raw + interpolated merged) ─────
+    // ── 3. Rebuild chart sorted by time ──────────────────────────────────────
     rebuildChart();
 
     // Auto-stop
