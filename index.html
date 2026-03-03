@@ -207,7 +207,7 @@
 <body>
 
 <header>
-  <div class="logo">SpeedLog v0.4</div>
+  <div class="logo">v0.5</div>
   <div class="gps-status">
     <div class="dot" id="gpsDot"></div>
     <span id="gpsLabel">GPS OFF</span>
@@ -462,17 +462,13 @@ function onPosition(pos) {
 
     document.getElementById('recMax').textContent = Math.round(maxSpeedSession);
 
-    // Raw GPS sample — only if still accelerating
-    if (prevGpsKmh === null || curKmh >= prevGpsKmh) {
-      addToRun(runIdx, curKmh, elapsedCur, false);
-    }
-
-    // Interpolated integer crossings
+    // Only interpolated integer crossings — no raw GPS samples on chart
+    // This guarantees the curve is strictly step-by-step: 40→41→42→...
     const curFloor = Math.floor(curKmh);
     if (curFloor > lastRecordedKmh) {
       for (let k = lastRecordedKmh + 1; k <= curFloor; k++) {
         const elapsed = interpolateTs(k) - recordingStartTs;
-        addToRun(runIdx, k, elapsed, true); // true = also log
+        addToRun(runIdx, k, elapsed, true);
       }
       lastRecordedKmh = curFloor;
     }
