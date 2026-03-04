@@ -207,7 +207,7 @@
 <body>
 
 <header>
-  <div class="logo">v0.5</div>
+  <div class="logo">v0.6</div>
   <div class="gps-status">
     <div class="dot" id="gpsDot"></div>
     <span id="gpsLabel">GPS OFF</span>
@@ -384,6 +384,7 @@ function clearData() {
   prevGpsKmh        = null;
   prevGpsTs         = null;
   activeRunIdx      = null;
+  GPS_WINDOW.length = 0;
   document.getElementById('recBar').classList.remove('show');
   document.getElementById('maxSpeed').textContent = '0';
   document.getElementById('maxBadge').textContent = 'MAX: — km/h';
@@ -392,6 +393,78 @@ function clearData() {
   chart.data.datasets = [];
   chart.update();
   renderLog();
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// HERMITE SPLINE — physics-accurate interpolation
+// ═══════════════════════════════════════════════════════════════════════════════
+// We keep a sliding window of GPS samples to estimate derivatives (dv/dt)
+// at each node using central differences. Between two nodes A and B we fit
+// a cubic Hermite that honours both values and tangents — this correctly
+// models the changing acceleration instead of assuming it constant.
+
+const GPS_WINDOW = [];   // last N raw GPS samples: {ts, kmh}
+const WIN_SIZE   = 4;    // samples kept for derivative estimation
+
+// Estimate dv/dt (km/h per ms) at node i using central differences
+function hermiteTangent(i) {
+  const prev = GPS_WINDOW[i - 1];
+  const next = GPS_WINDOW[i + 1];
+  const cur  = GPS_WINDOW[i];
+  if (prev && next) {
+    return (next.kmh - prev.kmh) / (next.ts - prev.ts);
+  } else if (next) {
+    return (next.kmh - cur.kmh)  / (next.ts  - cur.ts);
+  } else if (prev) {
+    return (cur.kmh  - prev.kmh) / (cur.ts   - prev.ts);
+  }
+  return 0;
+}
+
+// Evaluate Hermite cubic at normalised t∈[0,1]
+// p0,p1 = values at endpoints; m0,m1 = tangents * interval_duration
+function hermiteEval(t, p0, p1, m0, m1) {
+  const t2 = t*t, t3 = t2*t;
+  return (2*t3 - 3*t2 + 1)*p0 + (t3 - 2*t2 + t)*m0
+       + (-2*t3 + 3*t2)*p1   + (t3 - t2)*m1;
+}
+
+// Given a Hermite segment [A→B], find t∈[0,1] where v(t)=targetKmh (Newton-Raphson)
+// Returns the interpolated timestamp in ms, or null if not in range.
+function hermiteSolveTs(A, B, mA, mB, targetKmh) {
+  const dt = B.ts - A.ts;
+  const m0 = mA * dt, m1 = mB * dt;  // scale tangents to interval
+
+  // Quick sanity: target must lie between A and B
+  if (targetKmh < Math.min(A.kmh, B.kmh) || targetKmh > Math.max(A.kmh, B.kmh)) return null;
+
+  // Newton-Raphson on f(t) = hermite(t) - target = 0
+  let t = (targetKmh - A.kmh) / (B.kmh - A.kmh || 1e-9); // linear seed
+  for (let iter = 0; iter < 12; iter++) {
+    const ft = hermiteEval(t, A.kmh, B.kmh, m0, m1) - targetKmh;
+    // derivative df/dt
+    const t2 = t*t;
+    const dft = (6*t2 - 6*t)*A.kmh + (3*t2 - 4*t + 1)*m0
+              + (-6*t2 + 6*t)*B.kmh + (3*t2 - 2*t)*m1;
+    if (Math.abs(dft) < 1e-12) break;
+    t -= ft / dft;
+    t = Math.max(0, Math.min(1, t));
+  }
+  return A.ts + t * dt;
+}
+
+// Sub-sample the Hermite curve between A and B into N chart points
+function hermiteSamplePoints(A, B, mA, mB, N = 6) {
+  const dt = B.ts - A.ts;
+  const m0 = mA * dt, m1 = mB * dt;
+  const pts = [];
+  for (let i = 1; i < N; i++) {
+    const t   = i / N;
+    const kmh = hermiteEval(t, A.kmh, B.kmh, m0, m1);
+    const ts  = A.ts + t * dt;
+    pts.push({ ts, kmh });
+  }
+  return pts;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -405,7 +478,7 @@ function onPosition(pos) {
   const curTs  = pos.timestamp;
   const thresh = parseFloat(document.getElementById('thresholdInput').value) || 40;
 
-  // display
+  // ── display ────────────────────────────────────────────────────────────────
   const el = document.getElementById('speedNum');
   el.textContent = Math.round(curKmh);
   el.className   = 'speed-num' + (isRecording ? ' above-threshold' : '');
@@ -422,11 +495,27 @@ function onPosition(pos) {
     document.getElementById('maxBadge').textContent = 'MAX: ' + Math.round(maxSpeedSession) + ' km/h';
   }
 
-  // ── interpolation: exact timestamp when speed == targetKmh ────────────────
-  function interpolateTs(targetKmh) {
-    if (prevGpsKmh === null || curKmh === prevGpsKmh) return curTs;
-    const ratio = (targetKmh - prevGpsKmh) / (curKmh - prevGpsKmh);
-    return prevGpsTs + ratio * (curTs - prevGpsTs);
+  // ── update GPS window ──────────────────────────────────────────────────────
+  GPS_WINDOW.push({ ts: curTs, kmh: curKmh });
+  if (GPS_WINDOW.length > WIN_SIZE) GPS_WINDOW.shift();
+
+  // We need at least 2 samples to work with
+  if (GPS_WINDOW.length < 2) {
+    prevGpsKmh = curKmh; prevGpsTs = curTs;
+    return;
+  }
+
+  const idxA = GPS_WINDOW.length - 2;
+  const idxB = GPS_WINDOW.length - 1;
+  const A    = GPS_WINDOW[idxA];
+  const B    = GPS_WINDOW[idxB];
+  const mA   = hermiteTangent(idxA);  // dv/dt at A (km/h per ms)
+  const mB   = hermiteTangent(idxB);  // dv/dt at B
+
+  // ── linear fallback for threshold start ───────────────────────────────────
+  function linearTs(targetKmh) {
+    if (A.kmh === B.kmh) return B.ts;
+    return A.ts + (targetKmh - A.kmh) / (B.kmh - A.kmh) * (B.ts - A.ts);
   }
 
   // ── start a new run when crossing threshold upward ────────────────────────
@@ -436,22 +525,20 @@ function onPosition(pos) {
 
     if (crossedUp || alreadyAbove) {
       isRecording      = true;
-      recordingStartTs = crossedUp ? interpolateTs(thresh) : curTs;
+      recordingStartTs = crossedUp ? linearTs(thresh) : curTs;
       lastRecordedKmh  = Math.floor(thresh);
 
-      // Create new run object + chart dataset
       const runIdx = runs.length;
       const color  = RUN_COLORS[runIdx % RUN_COLORS.length];
       runs.push({ color, logPoints: [], chartPoints: [] });
       chart.data.datasets.push(makeDataset(runIdx));
-
       addRunTab(runIdx, color);
 
       document.getElementById('recBar').classList.add('show');
       document.getElementById('recThresh').textContent = thresh;
       document.getElementById('recMax').textContent    = '0';
 
-      // Threshold crossing point: t = 0, y = thresh
+      // Threshold crossing at t=0
       addToRun(runIdx, thresh, 0, true);
     }
   }
@@ -462,24 +549,53 @@ function onPosition(pos) {
 
     document.getElementById('recMax').textContent = Math.round(maxSpeedSession);
 
-    // Only interpolated integer crossings — no raw GPS samples on chart
-    // This guarantees the curve is strictly step-by-step: 40→41→42→...
+    // ── 1. Add the raw GPS sample (measured value) ─────────────────────────
+    if (curKmh > (runs[runIdx].chartPoints.at(-1)?.y ?? -Infinity)) {
+      addToRun(runIdx, curKmh, elapsedCur, false);
+    }
+
+    // ── 2. Insert Hermite sub-samples between A and B (only rising part) ───
+    //    These densify the curve to reflect real acceleration shape
+    if (B.kmh > A.kmh) {
+      const samples = hermiteSamplePoints(A, B, mA, mB, 8);
+      for (const s of samples) {
+        const elapsedS = s.ts - recordingStartTs;
+        if (elapsedS < 0) continue;
+        // Only add if still rising vs last chart point
+        const lastY = runs[runIdx].chartPoints.at(-1)?.y ?? -Infinity;
+        if (s.kmh > lastY) {
+          addToRun(runIdx, s.kmh, elapsedS, false);
+        }
+      }
+    }
+
+    // ── 3. Interpolated integer km/h crossings (log + chart) ───────────────
+    //    Use Hermite for precision; fall back to linear if out of Hermite range
     const curFloor = Math.floor(curKmh);
     if (curFloor > lastRecordedKmh) {
       for (let k = lastRecordedKmh + 1; k <= curFloor; k++) {
-        const elapsed = interpolateTs(k) - recordingStartTs;
-        addToRun(runIdx, k, elapsed, true);
+        const crossTs = hermiteSolveTs(A, B, mA, mB, k) ?? linearTs(k);
+        const elapsed = crossTs - recordingStartTs;
+        addToRun(runIdx, k, elapsed, true);  // log + chart
       }
       lastRecordedKmh = curFloor;
     }
 
-    // Sync this run's dataset to chart and redraw
-    chart.data.datasets[runIdx].data = runs[runIdx].chartPoints
+    // ── 4. Sync dataset: sort all points by time, keep only rising y ────────
+    const sorted = runs[runIdx].chartPoints
       .slice()
-      .sort((a,b) => a.x - b.x);
+      .sort((a, b) => a.x - b.x);
+
+    // Monotone filter: keep only points where y >= all previous y
+    let maxY = -Infinity;
+    const monotone = [];
+    for (const p of sorted) {
+      if (p.y >= maxY) { monotone.push(p); maxY = p.y; }
+    }
+    chart.data.datasets[runIdx].data = monotone;
     chart.update('none');
 
-    // Auto-stop when speed drops below threshold
+    // ── 5. Auto-stop ────────────────────────────────────────────────────────
     if (curKmh < thresh) {
       isRecording = false;
       document.getElementById('recBar').classList.remove('show');
@@ -492,8 +608,6 @@ function onPosition(pos) {
 }
 
 // ── Add a point to a run ──────────────────────────────────────────────────────
-// logToo=true  → also push to logPoints (integer crossings + threshold point)
-// logToo=false → chart only (raw GPS samples)
 function addToRun(runIdx, kmh, elapsed_ms, logToo) {
   const run = runs[runIdx];
   run.chartPoints.push({ x: elapsed_ms, y: kmh });
