@@ -207,7 +207,7 @@
 <body>
 
 <header>
-  <div class="logo">v0.6</div>
+  <div class="logo">v0.7</div>
   <div class="gps-status">
     <div class="dot" id="gpsDot"></div>
     <span id="gpsLabel">GPS OFF</span>
@@ -549,48 +549,43 @@ function onPosition(pos) {
 
     document.getElementById('recMax').textContent = Math.round(maxSpeedSession);
 
-    // ── 1. Add the raw GPS sample (measured value) ─────────────────────────
-    if (curKmh > (runs[runIdx].chartPoints.at(-1)?.y ?? -Infinity)) {
-      addToRun(runIdx, curKmh, elapsedCur, false);
-    }
+    // ── 1. Raw GPS sample — always collect, no inline filter ──────────────
+    addToRun(runIdx, curKmh, elapsedCur, false);
 
-    // ── 2. Insert Hermite sub-samples between A and B (only rising part) ───
-    //    These densify the curve to reflect real acceleration shape
+    // ── 2. Hermite sub-samples between A and B ────────────────────────────
+    //    Collected regardless of whether they rise or fall — the sync step
+    //    will sort everything by time and build the monotone envelope.
     if (B.kmh > A.kmh) {
       const samples = hermiteSamplePoints(A, B, mA, mB, 8);
       for (const s of samples) {
         const elapsedS = s.ts - recordingStartTs;
-        if (elapsedS < 0) continue;
-        // Only add if still rising vs last chart point
-        const lastY = runs[runIdx].chartPoints.at(-1)?.y ?? -Infinity;
-        if (s.kmh > lastY) {
-          addToRun(runIdx, s.kmh, elapsedS, false);
-        }
+        if (elapsedS >= 0) addToRun(runIdx, s.kmh, elapsedS, false);
       }
     }
 
-    // ── 3. Interpolated integer km/h crossings (log + chart) ───────────────
-    //    Use Hermite for precision; fall back to linear if out of Hermite range
+    // ── 3. Interpolated integer km/h crossings (log + chart) ──────────────
     const curFloor = Math.floor(curKmh);
     if (curFloor > lastRecordedKmh) {
       for (let k = lastRecordedKmh + 1; k <= curFloor; k++) {
         const crossTs = hermiteSolveTs(A, B, mA, mB, k) ?? linearTs(k);
         const elapsed = crossTs - recordingStartTs;
-        addToRun(runIdx, k, elapsed, true);  // log + chart
+        addToRun(runIdx, k, elapsed, true);
       }
       lastRecordedKmh = curFloor;
     }
 
-    // ── 4. Sync dataset: sort all points by time, keep only rising y ────────
-    const sorted = runs[runIdx].chartPoints
-      .slice()
-      .sort((a, b) => a.x - b.x);
-
-    // Monotone filter: keep only points where y >= all previous y
-    let maxY = -Infinity;
+    // ── 4. Build chart: sort by time → take running maximum of y ──────────
+    //    This is the correct monotone envelope: for each moment in time
+    //    the chart shows the highest speed reached up to that point.
+    //    It incorporates ALL collected points (raw GPS + Hermite + integers).
+    const allPts = runs[runIdx].chartPoints.slice().sort((a, b) => a.x - b.x);
+    let peakY = -Infinity;
     const monotone = [];
-    for (const p of sorted) {
-      if (p.y >= maxY) { monotone.push(p); maxY = p.y; }
+    for (const p of allPts) {
+      if (p.y >= peakY) {
+        monotone.push(p);
+        peakY = p.y;
+      }
     }
     chart.data.datasets[runIdx].data = monotone;
     chart.update('none');
