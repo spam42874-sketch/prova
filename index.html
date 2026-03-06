@@ -1,9 +1,7 @@
-<!DOCTYPE html>
-<html lang="it">
-<head>
+<html lang="it"><head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>SpeedLog</title>
+<title>v0.8</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@300;400;500;600;700&family=Share+Tech+Mono&display=swap');
@@ -207,7 +205,7 @@
 <body>
 
 <header>
-  <div class="logo">v0.7</div>
+  <div class="logo">SpeedLog</div>
   <div class="gps-status">
     <div class="dot" id="gpsDot"></div>
     <span id="gpsLabel">GPS OFF</span>
@@ -231,7 +229,7 @@
       <label style="color:var(--muted);font-size:11px;">km/h</label>
     </div>
     <button class="btn btn-start" id="btnStart" onclick="startTracking()">▶ START</button>
-    <button class="btn btn-stop"  id="btnStop"  onclick="stopTracking()"  style="display:none">■ STOP</button>
+    <button class="btn btn-stop" id="btnStop" onclick="stopTracking()" style="display:none">■ STOP</button>
     <button class="btn btn-clear" onclick="clearData()">↺</button>
   </div>
 
@@ -249,7 +247,7 @@
       <div class="chart-title">VELOCITÀ / TEMPO</div>
       <div class="max-badge" id="maxBadge">MAX: — km/h</div>
     </div>
-    <canvas id="myChart"></canvas>
+    <canvas id="myChart" width="996" height="960" style="display: block; box-sizing: border-box; height: 320px; width: 332px;"></canvas>
   </div>
 
   <div class="log-panel" id="logPanel">
@@ -549,21 +547,7 @@ function onPosition(pos) {
 
     document.getElementById('recMax').textContent = Math.round(maxSpeedSession);
 
-    // ── 1. Raw GPS sample — always collect, no inline filter ──────────────
-    addToRun(runIdx, curKmh, elapsedCur, false);
-
-    // ── 2. Hermite sub-samples between A and B ────────────────────────────
-    //    Collected regardless of whether they rise or fall — the sync step
-    //    will sort everything by time and build the monotone envelope.
-    if (B.kmh > A.kmh) {
-      const samples = hermiteSamplePoints(A, B, mA, mB, 8);
-      for (const s of samples) {
-        const elapsedS = s.ts - recordingStartTs;
-        if (elapsedS >= 0) addToRun(runIdx, s.kmh, elapsedS, false);
-      }
-    }
-
-    // ── 3. Interpolated integer km/h crossings (log + chart) ──────────────
+    // Only integer km/h crossings — Hermite-interpolated timestamps
     const curFloor = Math.floor(curKmh);
     if (curFloor > lastRecordedKmh) {
       for (let k = lastRecordedKmh + 1; k <= curFloor; k++) {
@@ -574,20 +558,8 @@ function onPosition(pos) {
       lastRecordedKmh = curFloor;
     }
 
-    // ── 4. Build chart: sort by time → take running maximum of y ──────────
-    //    This is the correct monotone envelope: for each moment in time
-    //    the chart shows the highest speed reached up to that point.
-    //    It incorporates ALL collected points (raw GPS + Hermite + integers).
-    const allPts = runs[runIdx].chartPoints.slice().sort((a, b) => a.x - b.x);
-    let peakY = -Infinity;
-    const monotone = [];
-    for (const p of allPts) {
-      if (p.y >= peakY) {
-        monotone.push(p);
-        peakY = p.y;
-      }
-    }
-    chart.data.datasets[runIdx].data = monotone;
+    // Dataset is already in order (integers always increase), just push directly
+    chart.data.datasets[runIdx].data = runs[runIdx].chartPoints.slice();
     chart.update('none');
 
     // ── 5. Auto-stop ────────────────────────────────────────────────────────
@@ -716,5 +688,6 @@ function onError(err) {
 }
 </script>
 
-</body>
-</html>
+
+
+</body></html>
