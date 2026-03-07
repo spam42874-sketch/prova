@@ -1,7 +1,9 @@
-<html lang="it"><head>
+<!DOCTYPE html>
+<html lang="it">
+<head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>v0.8</title>
+<title>SpeedLog</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@300;400;500;600;700&family=Share+Tech+Mono&display=swap');
@@ -205,7 +207,7 @@
 <body>
 
 <header>
-  <div class="logo">SpeedLog</div>
+  <div class="logo">v0.8</div>
   <div class="gps-status">
     <div class="dot" id="gpsDot"></div>
     <span id="gpsLabel">GPS OFF</span>
@@ -229,7 +231,7 @@
       <label style="color:var(--muted);font-size:11px;">km/h</label>
     </div>
     <button class="btn btn-start" id="btnStart" onclick="startTracking()">▶ START</button>
-    <button class="btn btn-stop" id="btnStop" onclick="stopTracking()" style="display:none">■ STOP</button>
+    <button class="btn btn-stop"  id="btnStop"  onclick="stopTracking()"  style="display:none">■ STOP</button>
     <button class="btn btn-clear" onclick="clearData()">↺</button>
   </div>
 
@@ -247,7 +249,7 @@
       <div class="chart-title">VELOCITÀ / TEMPO</div>
       <div class="max-badge" id="maxBadge">MAX: — km/h</div>
     </div>
-    <canvas id="myChart" width="996" height="960" style="display: block; box-sizing: border-box; height: 320px; width: 332px;"></canvas>
+    <canvas id="myChart"></canvas>
   </div>
 
   <div class="log-panel" id="logPanel">
@@ -688,6 +690,5 @@ function onError(err) {
 }
 </script>
 
-
-
-</body></html>
+</body>
+</html>
