@@ -207,7 +207,7 @@
 <body>
 
 <header>
-  <div class="logo">v0.8</div>
+  <div class="logo">v0.9</div>
   <div class="gps-status">
     <div class="dot" id="gpsDot"></div>
     <span id="gpsLabel">GPS OFF</span>
@@ -266,10 +266,101 @@ const RUN_COLORS = [
   '#00e5ff','#00ff88','#ff6b35','#c77dff','#ffce00',
   '#ff3366','#4fc3f7','#a5d6a7','#ffab91','#b39ddb'
 ];
-
 function hexToRgba(hex, a) {
-  const r=parseInt(hex.slice(1,3),16), g=parseInt(hex.slice(3,5),16), b=parseInt(hex.slice(5,7),16);
+  const r=parseInt(hex.slice(1,3),16),g=parseInt(hex.slice(3,5),16),b=parseInt(hex.slice(5,7),16);
   return `rgba(${r},${g},${b},${a})`;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// HERMITE SPLINE
+// Given 4 GPS samples, evaluate speed at any timestamp using Catmull-Rom
+// (a special case of Hermite that auto-computes tangents from neighbours).
+// We use the two samples bracketing the query time as p1,p2 and their
+// neighbours as p0,p3 for tangent estimation.
+// ═══════════════════════════════════════════════════════════════════════════════
+function catmullRom(p0, p1, p2, p3, t) {
+  // t in [0,1] between p1 and p2
+  const t2 = t*t, t3 = t2*t;
+  return 0.5 * (
+    (2*p1) +
+    (-p0 + p2) * t +
+    (2*p0 - 5*p1 + 4*p2 - p3) * t2 +
+    (-p0 + 3*p1 - 3*p2 + p3) * t3
+  );
+}
+
+// Evaluate Hermite-interpolated speed at timestamp `queryTs`
+// using the raw GPS sample buffer. Returns null if out of range.
+function hermiteSpeedAt(samples, queryTs) {
+  if (samples.length < 2) return null;
+  // Find bracketing pair
+  let i = -1;
+  for (let j = 0; j < samples.length - 1; j++) {
+    if (samples[j].ts <= queryTs && samples[j+1].ts >= queryTs) { i = j; break; }
+  }
+  if (i === -1) return null;
+
+  const A = samples[i], B = samples[i+1];
+  const t = (queryTs - A.ts) / (B.ts - A.ts);
+
+  // Get neighbours for Catmull-Rom (clamp at edges)
+  const p0 = (samples[i-1] ?? samples[i]).kmh;
+  const p1 = A.kmh;
+  const p2 = B.kmh;
+  const p3 = (samples[i+2] ?? samples[i+1]).kmh;
+
+  return catmullRom(p0, p1, p2, p3, t);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// POST-RUN CHART BUILDER
+// After a run ends: generate one chart point every 100ms from t=0 to end,
+// evaluating speed via Catmull-Rom. Keep only points where speed > all previous
+// (strictly ascending envelope = acceleration curve only).
+// ═══════════════════════════════════════════════════════════════════════════════
+function buildChart(samples, startTs) {
+  if (samples.length < 2) return [];
+
+  const endTs   = samples[samples.length - 1].ts;
+  const points  = [];
+  let   peakKmh = -Infinity;
+
+  for (let ts = startTs; ts <= endTs; ts += 100) {
+    const kmh = hermiteSpeedAt(samples, ts);
+    if (kmh === null) continue;
+    if (kmh > peakKmh) {
+      points.push({ x: ts - startTs, y: kmh });
+      peakKmh = kmh;
+    }
+  }
+  // Always include the last sample if it's a new peak
+  const lastKmh = samples[samples.length - 1].kmh;
+  if (lastKmh > peakKmh) {
+    points.push({ x: endTs - startTs, y: lastKmh });
+  }
+  return points;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// LOG BUILDER — integer km/h crossings via linear interpolation on raw samples
+// ═══════════════════════════════════════════════════════════════════════════════
+function buildLog(samples, startTs) {
+  if (samples.length < 2) return [];
+  const peak = Math.floor(Math.max(...samples.map(s => s.kmh)));
+  const start = Math.ceil(samples[0].kmh);
+  const log = [];
+  for (let k = start; k <= peak; k++) {
+    for (let i = 0; i < samples.length - 1; i++) {
+      const A = samples[i], B = samples[i+1];
+      if (A.kmh <= k && B.kmh > k && B.kmh > A.kmh) {
+        const ratio = (k - A.kmh) / (B.kmh - A.kmh);
+        const crossTs = A.ts + ratio * (B.ts - A.ts);
+        log.push({ kmh: k, time_ms: crossTs - startTs });
+        break;
+      }
+    }
+  }
+  return log;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -278,37 +369,31 @@ function hexToRgba(hex, a) {
 let watchId          = null;
 let isTracking       = false;
 let isRecording      = false;
-
 let prevGpsKmh       = null;
 let prevGpsTs        = null;
 let recordingStartTs = null;
-let lastRecordedKmh  = null;
 let maxSpeedSession  = 0;
+let currentSamples   = [];   // raw GPS buffer for current run
 
-// runs[i] = { color, logPoints: [{kmh,time_ms}], chartPoints: [{x,y}] }
-const runs = [];
-let activeRunIdx = null;   // which run is shown in the log (null = all)
+// runs[i] = { color, recordingStartTs, rawSamples, logPoints, chartPoints }
+const runs       = [];
+let activeRunIdx = null;
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// CHART
+// CHART SETUP
 // ═══════════════════════════════════════════════════════════════════════════════
 const ctx   = document.getElementById('myChart').getContext('2d');
 const chart = new Chart(ctx, {
   type: 'line',
   data: { datasets: [] },
   options: {
-    responsive: true,
-    maintainAspectRatio: false,
-    animation: false,
+    responsive: true, maintainAspectRatio: false,
+    animation: { duration: 500 },
     plugins: {
-      legend: {
-        display: true,
-        labels: { color:'#5a5f72', font:{family:'Share Tech Mono',size:10}, boxWidth:14, padding:8 }
-      },
+      legend: { display: true, labels: { color:'#5a5f72', font:{family:'Share Tech Mono',size:10}, boxWidth:14, padding:8 } },
       tooltip: {
-        mode: 'nearest', intersect: false,
-        backgroundColor:'#1a1d24', titleColor:'#00e5ff',
-        bodyColor:'#e8eaf0', borderColor:'#252830', borderWidth:1,
+        mode:'nearest', intersect:false,
+        backgroundColor:'#1a1d24', titleColor:'#00e5ff', bodyColor:'#e8eaf0', borderColor:'#252830', borderWidth:1,
         callbacks: {
           title: items => items[0].raw.y.toFixed(2) + ' km/h',
           label: item  => item.dataset.label + '  T+ ' + (item.raw.x/1000).toFixed(3) + 's'
@@ -320,8 +405,7 @@ const chart = new Chart(ctx, {
         type:'linear',
         title:{display:true,text:'Tempo (s)',color:'#5a5f72',font:{family:'Share Tech Mono',size:11}},
         grid:{color:'rgba(37,40,48,0.9)'},
-        ticks:{color:'#5a5f72',font:{family:'Share Tech Mono',size:10},maxTicksLimit:8,
-               callback: v => (v/1000).toFixed(1)+'s'}
+        ticks:{color:'#5a5f72',font:{family:'Share Tech Mono',size:10},maxTicksLimit:8,callback:v=>(v/1000).toFixed(1)+'s'}
       },
       y: {
         title:{display:true,text:'km/h',color:'#5a5f72',font:{family:'Share Tech Mono',size:11}},
@@ -333,19 +417,12 @@ const chart = new Chart(ctx, {
   }
 });
 
-function makeDataset(runIdx) {
-  const color = RUN_COLORS[runIdx % RUN_COLORS.length];
+function makeDataset(runIdx, color) {
   return {
-    label: 'Run ' + (runIdx+1),
-    data: [],
-    borderColor: color,
-    backgroundColor: hexToRgba(color, 0.06),
-    borderWidth: 2.5,
-    pointRadius: 0,
-    pointHoverRadius: 5,
-    pointHoverBackgroundColor: color,
-    tension: 0,
-    fill: false,
+    label: 'Run ' + (runIdx+1), data: [],
+    borderColor: color, backgroundColor: hexToRgba(color, 0.06),
+    borderWidth: 2.5, pointRadius: 0, pointHoverRadius: 5,
+    pointHoverBackgroundColor: color, tension: 0, fill: false,
   };
 }
 
@@ -366,7 +443,8 @@ function startTracking() {
 }
 
 function stopTracking() {
-  isTracking = false; isRecording = false;
+  if (isRecording) finaliseRun();
+  isTracking = false;
   if (watchId !== null) { navigator.geolocation.clearWatch(watchId); watchId = null; }
   document.getElementById('btnStart').style.display = '';
   document.getElementById('btnStop').style.display  = 'none';
@@ -376,95 +454,39 @@ function stopTracking() {
 }
 
 function clearData() {
-  runs.length       = 0;
-  maxSpeedSession   = 0;
-  lastRecordedKmh   = null;
-  isRecording       = false;
-  recordingStartTs  = null;
-  prevGpsKmh        = null;
-  prevGpsTs         = null;
-  activeRunIdx      = null;
-  GPS_WINDOW.length = 0;
+  runs.length = 0; currentSamples = [];
+  maxSpeedSession = 0; isRecording = false;
+  recordingStartTs = null; prevGpsKmh = null; prevGpsTs = null; activeRunIdx = null;
   document.getElementById('recBar').classList.remove('show');
   document.getElementById('maxSpeed').textContent = '0';
   document.getElementById('maxBadge').textContent = 'MAX: — km/h';
   document.getElementById('runTabs').style.display = 'none';
   document.getElementById('runTabs').innerHTML = '';
-  chart.data.datasets = [];
+  chart.data.datasets = []; chart.update(); renderLog();
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// FINALISE RUN
+// ═══════════════════════════════════════════════════════════════════════════════
+function finaliseRun() {
+  isRecording = false;
+  document.getElementById('recBar').classList.remove('show');
+  document.getElementById('elapsedTime').textContent = '—';
+  if (currentSamples.length < 2) return;
+
+  const runIdx   = runs.length - 1;
+  const run      = runs[runIdx];
+  run.rawSamples = currentSamples.slice();
+
+  const chartPts = buildChart(run.rawSamples, run.recordingStartTs);
+  const logPts   = buildLog(run.rawSamples, run.recordingStartTs);
+  run.chartPoints = chartPts;
+  run.logPoints   = logPts;
+
+  chart.data.datasets[runIdx].data = chartPts;
   chart.update();
+  currentSamples = [];
   renderLog();
-}
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// HERMITE SPLINE — physics-accurate interpolation
-// ═══════════════════════════════════════════════════════════════════════════════
-// We keep a sliding window of GPS samples to estimate derivatives (dv/dt)
-// at each node using central differences. Between two nodes A and B we fit
-// a cubic Hermite that honours both values and tangents — this correctly
-// models the changing acceleration instead of assuming it constant.
-
-const GPS_WINDOW = [];   // last N raw GPS samples: {ts, kmh}
-const WIN_SIZE   = 4;    // samples kept for derivative estimation
-
-// Estimate dv/dt (km/h per ms) at node i using central differences
-function hermiteTangent(i) {
-  const prev = GPS_WINDOW[i - 1];
-  const next = GPS_WINDOW[i + 1];
-  const cur  = GPS_WINDOW[i];
-  if (prev && next) {
-    return (next.kmh - prev.kmh) / (next.ts - prev.ts);
-  } else if (next) {
-    return (next.kmh - cur.kmh)  / (next.ts  - cur.ts);
-  } else if (prev) {
-    return (cur.kmh  - prev.kmh) / (cur.ts   - prev.ts);
-  }
-  return 0;
-}
-
-// Evaluate Hermite cubic at normalised t∈[0,1]
-// p0,p1 = values at endpoints; m0,m1 = tangents * interval_duration
-function hermiteEval(t, p0, p1, m0, m1) {
-  const t2 = t*t, t3 = t2*t;
-  return (2*t3 - 3*t2 + 1)*p0 + (t3 - 2*t2 + t)*m0
-       + (-2*t3 + 3*t2)*p1   + (t3 - t2)*m1;
-}
-
-// Given a Hermite segment [A→B], find t∈[0,1] where v(t)=targetKmh (Newton-Raphson)
-// Returns the interpolated timestamp in ms, or null if not in range.
-function hermiteSolveTs(A, B, mA, mB, targetKmh) {
-  const dt = B.ts - A.ts;
-  const m0 = mA * dt, m1 = mB * dt;  // scale tangents to interval
-
-  // Quick sanity: target must lie between A and B
-  if (targetKmh < Math.min(A.kmh, B.kmh) || targetKmh > Math.max(A.kmh, B.kmh)) return null;
-
-  // Newton-Raphson on f(t) = hermite(t) - target = 0
-  let t = (targetKmh - A.kmh) / (B.kmh - A.kmh || 1e-9); // linear seed
-  for (let iter = 0; iter < 12; iter++) {
-    const ft = hermiteEval(t, A.kmh, B.kmh, m0, m1) - targetKmh;
-    // derivative df/dt
-    const t2 = t*t;
-    const dft = (6*t2 - 6*t)*A.kmh + (3*t2 - 4*t + 1)*m0
-              + (-6*t2 + 6*t)*B.kmh + (3*t2 - 2*t)*m1;
-    if (Math.abs(dft) < 1e-12) break;
-    t -= ft / dft;
-    t = Math.max(0, Math.min(1, t));
-  }
-  return A.ts + t * dt;
-}
-
-// Sub-sample the Hermite curve between A and B into N chart points
-function hermiteSamplePoints(A, B, mA, mB, N = 6) {
-  const dt = B.ts - A.ts;
-  const m0 = mA * dt, m1 = mB * dt;
-  const pts = [];
-  for (let i = 1; i < N; i++) {
-    const t   = i / N;
-    const kmh = hermiteEval(t, A.kmh, B.kmh, m0, m1);
-    const ts  = A.ts + t * dt;
-    pts.push({ ts, kmh });
-  }
-  return pts;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -478,211 +500,122 @@ function onPosition(pos) {
   const curTs  = pos.timestamp;
   const thresh = parseFloat(document.getElementById('thresholdInput').value) || 40;
 
-  // ── display ────────────────────────────────────────────────────────────────
-  const el = document.getElementById('speedNum');
-  el.textContent = Math.round(curKmh);
-  el.className   = 'speed-num' + (isRecording ? ' above-threshold' : '');
+  // display
+  document.getElementById('speedNum').textContent = Math.round(curKmh);
+  document.getElementById('speedNum').className   = 'speed-num' + (isRecording ? ' above-threshold' : '');
 
   if (prevGpsTs !== null) {
     const dt = (curTs - prevGpsTs) / 1000;
     if (dt > 0) document.getElementById('accVal').textContent =
       ((curKmh - prevGpsKmh) / 3.6 / dt).toFixed(2);
   }
-
   if (curKmh > maxSpeedSession) {
     maxSpeedSession = curKmh;
     document.getElementById('maxSpeed').textContent = Math.round(maxSpeedSession);
     document.getElementById('maxBadge').textContent = 'MAX: ' + Math.round(maxSpeedSession) + ' km/h';
   }
 
-  // ── update GPS window ──────────────────────────────────────────────────────
-  GPS_WINDOW.push({ ts: curTs, kmh: curKmh });
-  if (GPS_WINDOW.length > WIN_SIZE) GPS_WINDOW.shift();
-
-  // We need at least 2 samples to work with
-  if (GPS_WINDOW.length < 2) {
-    prevGpsKmh = curKmh; prevGpsTs = curTs;
-    return;
-  }
-
-  const idxA = GPS_WINDOW.length - 2;
-  const idxB = GPS_WINDOW.length - 1;
-  const A    = GPS_WINDOW[idxA];
-  const B    = GPS_WINDOW[idxB];
-  const mA   = hermiteTangent(idxA);  // dv/dt at A (km/h per ms)
-  const mB   = hermiteTangent(idxB);  // dv/dt at B
-
-  // ── linear fallback for threshold start ───────────────────────────────────
-  function linearTs(targetKmh) {
-    if (A.kmh === B.kmh) return B.ts;
-    return A.ts + (targetKmh - A.kmh) / (B.kmh - A.kmh) * (B.ts - A.ts);
-  }
-
-  // ── start a new run when crossing threshold upward ────────────────────────
+  // start new run
   if (!isRecording) {
     const crossedUp    = prevGpsKmh !== null && prevGpsKmh < thresh && curKmh >= thresh;
     const alreadyAbove = prevGpsKmh === null && curKmh >= thresh;
-
     if (crossedUp || alreadyAbove) {
-      isRecording      = true;
-      recordingStartTs = crossedUp ? linearTs(thresh) : curTs;
-      lastRecordedKmh  = Math.floor(thresh);
-
+      isRecording = true;
+      if (crossedUp && curKmh !== prevGpsKmh) {
+        const r = (thresh - prevGpsKmh) / (curKmh - prevGpsKmh);
+        recordingStartTs = prevGpsTs + r * (curTs - prevGpsTs);
+      } else {
+        recordingStartTs = curTs;
+      }
+      currentSamples = [{ ts: recordingStartTs, kmh: thresh }];
       const runIdx = runs.length;
       const color  = RUN_COLORS[runIdx % RUN_COLORS.length];
-      runs.push({ color, logPoints: [], chartPoints: [] });
-      chart.data.datasets.push(makeDataset(runIdx));
+      runs.push({ color, recordingStartTs, rawSamples: [], logPoints: [], chartPoints: [] });
+      chart.data.datasets.push(makeDataset(runIdx, color));
       addRunTab(runIdx, color);
-
       document.getElementById('recBar').classList.add('show');
       document.getElementById('recThresh').textContent = thresh;
       document.getElementById('recMax').textContent    = '0';
-
-      // Threshold crossing at t=0
-      addToRun(runIdx, thresh, 0, true);
     }
   }
 
   if (isRecording) {
-    const runIdx     = runs.length - 1;
-    const elapsedCur = curTs - recordingStartTs;
-
+    // Only push if timestamp is new (avoid duplicates)
+    if (currentSamples.length === 0 || curTs > currentSamples[currentSamples.length - 1].ts) {
+      currentSamples.push({ ts: curTs, kmh: curKmh });
+    }
     document.getElementById('recMax').textContent = Math.round(maxSpeedSession);
-
-    // Only integer km/h crossings — Hermite-interpolated timestamps
-    const curFloor = Math.floor(curKmh);
-    if (curFloor > lastRecordedKmh) {
-      for (let k = lastRecordedKmh + 1; k <= curFloor; k++) {
-        const crossTs = hermiteSolveTs(A, B, mA, mB, k) ?? linearTs(k);
-        const elapsed = crossTs - recordingStartTs;
-        addToRun(runIdx, k, elapsed, true);
-      }
-      lastRecordedKmh = curFloor;
-    }
-
-    // Dataset is already in order (integers always increase), just push directly
-    chart.data.datasets[runIdx].data = runs[runIdx].chartPoints.slice();
-    chart.update('none');
-
-    // ── 5. Auto-stop ────────────────────────────────────────────────────────
-    if (curKmh < thresh) {
-      isRecording = false;
-      document.getElementById('recBar').classList.remove('show');
-      document.getElementById('elapsedTime').textContent = '—';
-    }
+    if (curKmh < thresh) finaliseRun();
   }
 
   prevGpsKmh = curKmh;
   prevGpsTs  = curTs;
 }
 
-// ── Add a point to a run ──────────────────────────────────────────────────────
-function addToRun(runIdx, kmh, elapsed_ms, logToo) {
-  const run = runs[runIdx];
-  run.chartPoints.push({ x: elapsed_ms, y: kmh });
-  if (logToo) {
-    run.logPoints.push({ kmh: Math.round(kmh), time_ms: elapsed_ms });
-    renderLog();
-  }
-}
-
 // ── Run selector tabs ─────────────────────────────────────────────────────────
 function addRunTab(runIdx, color) {
   const tabs = document.getElementById('runTabs');
   tabs.style.display = 'flex';
-
-  // "All" tab — create once
   if (tabs.children.length === 0) {
     const all = document.createElement('div');
-    all.className = 'run-tab active';
-    all.textContent = 'TUTTI';
-    all.style.borderColor = '#5a5f72';
-    all.style.color = '#5a5f72';
-    all.onclick = () => selectRun(null);
-    tabs.appendChild(all);
+    all.className = 'run-tab active'; all.textContent = 'TUTTI';
+    all.style.borderColor = '#5a5f72'; all.style.color = '#5a5f72';
+    all.onclick = () => selectRun(null); tabs.appendChild(all);
   }
-
   const tab = document.createElement('div');
-  tab.className   = 'run-tab';
-  tab.id          = 'tab-' + runIdx;
-  tab.textContent = 'Run ' + (runIdx+1);
-  tab.style.borderColor = color;
-  tab.style.color       = color;
-  tab.onclick = () => selectRun(runIdx);
-  tabs.appendChild(tab);
+  tab.className = 'run-tab'; tab.id = 'tab-'+runIdx;
+  tab.textContent = 'Run '+(runIdx+1);
+  tab.style.borderColor = color; tab.style.color = color;
+  tab.onclick = () => selectRun(runIdx); tabs.appendChild(tab);
 }
 
 function selectRun(idx) {
   activeRunIdx = idx;
-  // Update tab highlight
   const tabs = document.getElementById('runTabs');
-  Array.from(tabs.children).forEach((t, i) => {
-    // i=0 is "TUTTI", i=1 is Run 0, etc.
-    const isActive = (idx === null && i === 0) || (idx !== null && i === idx + 1);
-    t.classList.toggle('active', isActive);
+  Array.from(tabs.children).forEach((t,i) => {
+    t.classList.toggle('active', (idx===null&&i===0)||(idx!==null&&i===idx+1));
   });
-  // Show/hide datasets
-  chart.data.datasets.forEach((ds, i) => {
-    ds.hidden = (idx !== null && i !== idx);
-  });
-  chart.update('none');
-  renderLog();
+  chart.data.datasets.forEach((ds,i) => { ds.hidden = idx!==null && i!==idx; });
+  chart.update('none'); renderLog();
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// ELAPSED DISPLAY
-// ═══════════════════════════════════════════════════════════════════════════════
+// ── Elapsed loop ──────────────────────────────────────────────────────────────
 function elapsedLoop() {
   if (!isTracking) return;
   if (isRecording && recordingStartTs !== null) {
     const t = Date.now() - recordingStartTs;
-    document.getElementById('elapsedTime').textContent = (t/1000).toFixed(3) + 's';
+    document.getElementById('elapsedTime').textContent = (t/1000).toFixed(3)+'s';
   }
   requestAnimationFrame(elapsedLoop);
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// LOG RENDER
-// ═══════════════════════════════════════════════════════════════════════════════
+// ── Log render ────────────────────────────────────────────────────────────────
 function renderLog() {
   const panel = document.getElementById('logPanel');
-  // Collect points from the selected run(s)
   let rows = [];
   if (activeRunIdx !== null) {
-    runs[activeRunIdx]?.logPoints.forEach(p => rows.push({ ...p, runIdx: activeRunIdx }));
+    runs[activeRunIdx]?.logPoints.forEach(p => rows.push({...p, runIdx: activeRunIdx}));
   } else {
-    runs.forEach((r, i) => r.logPoints.forEach(p => rows.push({ ...p, runIdx: i })));
+    runs.forEach((r,i) => r.logPoints.forEach(p => rows.push({...p, runIdx: i})));
   }
-
-  if (rows.length === 0) {
-    panel.innerHTML = '<div class="log-empty">nessun dato registrato</div>';
-    return;
-  }
-
-  let html = '';
-  let prevTime = null, prevRun = null;
+  if (rows.length === 0) { panel.innerHTML = '<div class="log-empty">nessun dato registrato</div>'; return; }
+  let html = '', prevTime = null, prevRun = null;
   for (const row of rows) {
     const color = RUN_COLORS[row.runIdx % RUN_COLORS.length];
-    const isNewRun = row.runIdx !== prevRun;
-    const delta = (!isNewRun && prevTime !== null)
-      ? '+' + ((row.time_ms - prevTime)/1000).toFixed(3) + 's'
-      : '—';
+    const delta = (row.runIdx === prevRun && prevTime !== null)
+      ? '+' + ((row.time_ms - prevTime)/1000).toFixed(3)+'s' : '—';
     html += `<div class="log-row">
       <div class="log-run" style="color:${color}">R${row.runIdx+1}</div>
       <div class="log-kmh">${row.kmh} km/h</div>
       <div class="log-time">T+ ${(row.time_ms/1000).toFixed(3)}s</div>
       <div class="log-delta">${delta}</div>
     </div>`;
-    prevTime = row.time_ms;
-    prevRun  = row.runIdx;
+    prevTime = row.time_ms; prevRun = row.runIdx;
   }
-  panel.innerHTML = html;
-  panel.scrollTop = panel.scrollHeight;
+  panel.innerHTML = html; panel.scrollTop = panel.scrollHeight;
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// ERROR
-// ═══════════════════════════════════════════════════════════════════════════════
+// ── Error ─────────────────────────────────────────────────────────────────────
 function onError(err) {
   document.getElementById('gpsDot').className     = 'dot';
   document.getElementById('gpsLabel').textContent = 'ERRORE';
