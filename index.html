@@ -2,626 +2,1170 @@
 <html lang="it">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>SpeedLog</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>SpeedCurve</title>
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@300;400;500;600;700&family=Share+Tech+Mono&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=DM+Mono:wght@300;400;500&family=DM+Sans:wght@300;400;600&display=swap');
 
-  :root {
-    --bg: #0a0c0f;
-    --surface: #111318;
-    --surface2: #1a1d24;
-    --border: #252830;
-    --accent: #00e5ff;
-    --accent2: #ff6b35;
-    --green: #00ff88;
-    --red: #ff3366;
-    --text: #e8eaf0;
-    --muted: #5a5f72;
-  }
+:root {
+  --bg:       #07090d;
+  --surface:  #0d1117;
+  --panel:    #111820;
+  --border:   #1c2a38;
+  --border2:  #243447;
+  --accent:   #f0c040;
+  --accent2:  #ff5f40;
+  --cyan:     #38c8f0;
+  --green:    #2deb8a;
+  --purple:   #a855f7;
+  --text:     #d4e4f4;
+  --dim:      #4a6880;
+  --dim2:     #6a8aaa;
+  --danger:   #ff3355;
+}
 
-  * { margin: 0; padding: 0; box-sizing: border-box; }
-  html, body { height: 100%; overflow: hidden; }
+* { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
 
-  body {
-    background: var(--bg);
-    color: var(--text);
-    font-family: 'Rajdhani', sans-serif;
-    display: flex;
-    flex-direction: column;
-    height: 100dvh;
-  }
+html, body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'DM Sans', sans-serif;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
 
-  header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 12px 16px 8px;
-    border-bottom: 1px solid var(--border);
-    flex-shrink: 0;
-  }
+/* Scanline overlay */
+body::after {
+  content:'';
+  position:fixed; inset:0;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0,0,0,0.06) 2px,
+    rgba(0,0,0,0.06) 4px
+  );
+  pointer-events:none;
+  z-index:999;
+}
 
-  .logo {
-    font-size: 22px;
-    font-weight: 700;
-    letter-spacing: 4px;
-    color: var(--accent);
-    text-transform: uppercase;
-  }
+/* Grid bg */
+body::before {
+  content:'';
+  position:fixed; inset:0;
+  background-image:
+    linear-gradient(rgba(56,200,240,0.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(56,200,240,0.025) 1px, transparent 1px);
+  background-size: 48px 48px;
+  pointer-events:none;
+  z-index:0;
+}
 
-  .gps-status {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    font-size: 13px;
-    font-family: 'Share Tech Mono', monospace;
-    color: var(--muted);
-  }
+.app {
+  position:relative;
+  z-index:1;
+  max-width:520px;
+  margin:0 auto;
+  padding:16px 14px 32px;
+}
 
-  .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); transition: background 0.3s; }
-  .dot.active   { background: var(--green); box-shadow: 0 0 8px var(--green); animation: pulse 1.5s infinite; }
-  .dot.searching{ background: var(--accent2); animation: pulse 0.6s infinite; }
+/* ── HEADER ── */
+.hdr {
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  margin-bottom:18px;
+  padding-bottom:12px;
+  border-bottom:1px solid var(--border);
+}
+.logo {
+  font-family:'Orbitron', monospace;
+  font-size:16px;
+  font-weight:900;
+  letter-spacing:3px;
+  color: var(--accent);
+  text-shadow: 0 0 20px rgba(240,192,64,0.4);
+}
+.logo span { color: var(--cyan); }
+.hdr-right { display:flex; align-items:center; gap:10px; }
+.hz-pill {
+  font-family:'DM Mono', monospace;
+  font-size:10px;
+  letter-spacing:2px;
+  color: var(--cyan);
+  border:1px solid rgba(56,200,240,0.3);
+  border-radius:20px;
+  padding:3px 10px;
+}
+.live-dot {
+  width:9px; height:9px;
+  border-radius:50%;
+  background: var(--dim);
+  transition:all .3s;
+}
+.live-dot.on {
+  background: var(--green);
+  box-shadow: 0 0 8px var(--green), 0 0 20px rgba(45,235,138,0.35);
+  animation: blink 1.4s ease-in-out infinite;
+}
+@keyframes blink {
+  0%,100%{opacity:1} 50%{opacity:.4}
+}
 
-  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+/* ── BIG SPEED ── */
+.speed-hero {
+  background: var(--surface);
+  border:1px solid var(--border);
+  border-radius:20px;
+  padding:22px 20px 16px;
+  margin-bottom:12px;
+  position:relative;
+  overflow:hidden;
+}
+.speed-hero::before {
+  content:'';
+  position:absolute; top:0; left:0; right:0; height:1px;
+  background: linear-gradient(90deg, transparent 0%, var(--accent) 50%, transparent 100%);
+  opacity:.6;
+}
+.speed-row {
+  display:flex;
+  align-items:flex-end;
+  gap:6px;
+  margin-bottom:6px;
+}
+.speed-num {
+  font-family:'Orbitron', monospace;
+  font-size:84px;
+  font-weight:900;
+  line-height:1;
+  color: var(--accent);
+  text-shadow: 0 0 40px rgba(240,192,64,0.35);
+  letter-spacing:-2px;
+  transition: color .2s, text-shadow .2s;
+}
+.speed-num.running { color: var(--cyan); text-shadow: 0 0 40px rgba(56,200,240,0.35); }
+.speed-num.above   { color: var(--green); text-shadow: 0 0 40px rgba(45,235,138,0.4); }
+.speed-unit {
+  font-family:'DM Mono', monospace;
+  font-size:20px;
+  color: var(--dim2);
+  padding-bottom:10px;
+}
+.speed-meta {
+  display:flex;
+  justify-content:space-between;
+  font-family:'DM Mono', monospace;
+  font-size:11px;
+  color: var(--dim);
+  letter-spacing:1.5px;
+}
+.speed-meta .val { color: var(--text); }
 
-  .main {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-    padding: 12px 16px;
-    gap: 12px;
-  }
+/* Run indicator */
+.run-banner {
+  display:none;
+  align-items:center;
+  gap:8px;
+  background: rgba(45,235,138,0.08);
+  border:1px solid rgba(45,235,138,0.2);
+  border-radius:10px;
+  padding:8px 14px;
+  margin-bottom:12px;
+  font-family:'DM Mono', monospace;
+  font-size:12px;
+  letter-spacing:1px;
+  color: var(--green);
+}
+.run-banner.active { display:flex; }
+.run-pulse {
+  width:7px; height:7px;
+  border-radius:50%;
+  background: var(--green);
+  animation: blink .8s ease-in-out infinite;
+  flex-shrink:0;
+}
+.run-time {
+  margin-left:auto;
+  font-size:16px;
+  font-weight:500;
+  color: var(--accent);
+}
 
-  .speed-display { text-align: center; }
+/* ── THRESHOLD ── */
+.thresh-card {
+  background: var(--surface);
+  border:1px solid var(--border);
+  border-radius:14px;
+  padding:14px 16px;
+  margin-bottom:12px;
+  display:flex;
+  align-items:center;
+  gap:12px;
+}
+.thresh-label {
+  font-family:'DM Mono', monospace;
+  font-size:10px;
+  letter-spacing:3px;
+  color: var(--dim);
+  text-transform:uppercase;
+  white-space:nowrap;
+}
+.thresh-input-wrap {
+  display:flex;
+  align-items:center;
+  gap:6px;
+  flex:1;
+}
+.thresh-input {
+  background: var(--panel);
+  border:1px solid var(--border2);
+  border-radius:8px;
+  color: var(--accent);
+  font-family:'Orbitron', monospace;
+  font-size:22px;
+  font-weight:700;
+  width:90px;
+  text-align:center;
+  padding:6px 4px;
+  outline:none;
+  transition:border-color .2s;
+  -moz-appearance:textfield;
+}
+.thresh-input::-webkit-outer-spin-button,
+.thresh-input::-webkit-inner-spin-button { -webkit-appearance:none; }
+.thresh-input:focus { border-color: var(--accent); box-shadow:0 0 0 2px rgba(240,192,64,.15); }
+.thresh-unit-lbl {
+  font-family:'DM Mono', monospace;
+  font-size:12px;
+  color: var(--dim2);
+}
+.thresh-btns { display:flex; flex-direction:column; gap:4px; }
+.thresh-btn {
+  background: var(--panel);
+  border:1px solid var(--border2);
+  border-radius:6px;
+  color: var(--text);
+  font-size:14px;
+  width:28px; height:22px;
+  cursor:pointer;
+  display:flex; align-items:center; justify-content:center;
+  transition:all .15s;
+}
+.thresh-btn:hover { background:var(--border2); color:var(--accent); }
 
-  .speed-num {
-    font-family: 'Share Tech Mono', monospace;
-    font-size: clamp(64px, 18vw, 96px);
-    line-height: 1;
-    color: var(--accent);
-    text-shadow: 0 0 30px rgba(0,229,255,0.5);
-    transition: color 0.2s;
-  }
-  .speed-num.above-threshold { color: var(--green); text-shadow: 0 0 30px rgba(0,255,136,0.5); }
+/* ── CONTROLS ── */
+.ctrl-row {
+  display:grid;
+  grid-template-columns:1fr auto auto;
+  gap:8px;
+  margin-bottom:12px;
+}
+.btn {
+  font-family:'DM Sans', sans-serif;
+  font-weight:600;
+  font-size:12px;
+  letter-spacing:2px;
+  text-transform:uppercase;
+  border:none;
+  border-radius:10px;
+  padding:13px 16px;
+  cursor:pointer;
+  transition:all .2s;
+  white-space:nowrap;
+}
+.btn-main {
+  background: var(--accent);
+  color: #07090d;
+}
+.btn-main:hover { filter:brightness(1.1); transform:translateY(-1px); }
+.btn-main.stop { background: var(--danger); color:#fff; }
+.btn-secondary {
+  background: var(--panel);
+  border:1px solid var(--border2);
+  color: var(--dim2);
+}
+.btn-secondary:hover { border-color:var(--text); color:var(--text); }
+.btn-secondary.active { border-color:var(--accent); color:var(--accent); }
 
-  .speed-unit { font-size: 18px; letter-spacing: 3px; color: var(--muted); font-weight: 600; }
+/* ── CHART ── */
+.chart-card {
+  background: var(--surface);
+  border:1px solid var(--border);
+  border-radius:16px;
+  padding:16px 14px 12px;
+  margin-bottom:12px;
+}
+.chart-header {
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  margin-bottom:14px;
+}
+.chart-title {
+  font-family:'DM Mono', monospace;
+  font-size:10px;
+  letter-spacing:3px;
+  color: var(--dim);
+  text-transform:uppercase;
+}
+.chart-legend {
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px;
+  margin-top:6px;
+}
+.legend-item {
+  display:flex;
+  align-items:center;
+  gap:5px;
+  font-family:'DM Mono', monospace;
+  font-size:9px;
+  letter-spacing:1px;
+  color: var(--dim2);
+  cursor:pointer;
+  transition:opacity .2s;
+}
+.legend-dot { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
+.legend-item.faded { opacity:.35; }
 
-  .speed-meta {
-    display: flex;
-    justify-content: center;
-    gap: 24px;
-    margin-top: 6px;
-    font-size: 13px;
-    font-family: 'Share Tech Mono', monospace;
-    color: var(--muted);
-  }
-  .speed-meta span { color: var(--text); }
+.chart-wrap {
+  position:relative;
+  width:100%;
+}
+canvas#chart {
+  width:100%;
+  height:220px;
+  display:block;
+  cursor:crosshair;
+}
 
-  .controls { display: flex; gap: 10px; align-items: stretch; flex-shrink: 0; }
+/* ── RUNS LIST ── */
+.runs-card {
+  background: var(--surface);
+  border:1px solid var(--border);
+  border-radius:16px;
+  padding:14px;
+  margin-bottom:12px;
+}
+.runs-header {
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  margin-bottom:12px;
+}
+.section-title {
+  font-family:'DM Mono', monospace;
+  font-size:10px;
+  letter-spacing:3px;
+  color: var(--dim);
+  text-transform:uppercase;
+}
+.btn-clear-runs {
+  font-family:'DM Mono', monospace;
+  font-size:9px;
+  letter-spacing:2px;
+  background:transparent;
+  border:1px solid var(--border2);
+  color: var(--dim);
+  border-radius:6px;
+  padding:4px 10px;
+  cursor:pointer;
+  transition:all .15s;
+}
+.btn-clear-runs:hover { border-color:var(--danger); color:var(--danger); }
 
-  .threshold-group {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 8px 12px;
-    flex: 1;
-  }
-  .threshold-group label { font-size: 12px; letter-spacing: 2px; color: var(--muted); white-space: nowrap; }
-  .threshold-group input {
-    background: transparent; border: none;
-    color: var(--accent2); font-family: 'Share Tech Mono', monospace;
-    font-size: 20px; width: 60px; text-align: center; outline: none;
-  }
-  .threshold-group input::-webkit-inner-spin-button,
-  .threshold-group input::-webkit-outer-spin-button { -webkit-appearance: none; }
+.run-list { display:flex; flex-direction:column; gap:7px; }
+.run-item {
+  background: var(--panel);
+  border:1px solid var(--border);
+  border-radius:10px;
+  padding:10px 12px;
+  display:flex;
+  align-items:center;
+  gap:10px;
+  cursor:pointer;
+  transition:border-color .15s;
+}
+.run-item:hover { border-color:var(--border2); }
+.run-item.selected { border-color:rgba(56,200,240,.4); background: rgba(56,200,240,.04); }
+.run-color { width:10px; height:28px; border-radius:3px; flex-shrink:0; }
+.run-info { flex:1; min-width:0; }
+.run-name {
+  font-family:'DM Mono', monospace;
+  font-size:11px;
+  letter-spacing:1px;
+  color: var(--text);
+  margin-bottom:3px;
+}
+.run-sub {
+  font-family:'DM Mono', monospace;
+  font-size:10px;
+  color: var(--dim);
+}
+.run-peak {
+  font-family:'Orbitron', monospace;
+  font-size:16px;
+  font-weight:700;
+  color: var(--accent);
+}
+.run-peak small {
+  font-family:'DM Mono', monospace;
+  font-size:9px;
+  color: var(--dim2);
+  font-weight:400;
+}
+.run-del {
+  background:transparent;
+  border:none;
+  color: var(--dim);
+  font-size:14px;
+  cursor:pointer;
+  padding:4px;
+  line-height:1;
+  transition:color .15s;
+}
+.run-del:hover { color:var(--danger); }
 
-  .btn {
-    padding: 10px 18px; border: 1px solid; border-radius: 8px;
-    font-family: 'Rajdhani', sans-serif; font-size: 14px; font-weight: 700;
-    letter-spacing: 2px; cursor: pointer; text-transform: uppercase;
-    transition: all 0.15s; flex-shrink: 0;
-  }
-  .btn-start { background: rgba(0,255,136,0.1); border-color: var(--green); color: var(--green); }
-  .btn-start:hover { background: var(--green); color: var(--bg); box-shadow: 0 0 20px rgba(0,255,136,0.4); }
-  .btn-stop  { background: rgba(255,51,102,0.1); border-color: var(--red); color: var(--red); }
-  .btn-stop:hover { background: var(--red); color: #fff; box-shadow: 0 0 20px rgba(255,51,102,0.4); }
-  .btn-clear { background: rgba(90,95,114,0.1); border-color: var(--muted); color: var(--muted); font-size: 12px; padding: 10px 12px; }
-  .btn-clear:hover { border-color: var(--text); color: var(--text); }
+.no-runs {
+  text-align:center;
+  font-family:'DM Mono', monospace;
+  font-size:11px;
+  color: var(--dim);
+  letter-spacing:2px;
+  padding:18px 0;
+}
 
-  .rec-bar {
-    display: none; align-items: center; gap: 10px;
-    padding: 8px 12px;
-    background: rgba(0,255,136,0.05); border: 1px solid rgba(0,255,136,0.2);
-    border-radius: 8px; flex-shrink: 0;
-    font-family: 'Share Tech Mono', monospace; font-size: 13px;
-  }
-  .rec-bar.show { display: flex; }
-  .rec-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--red); animation: pulse 0.8s infinite; flex-shrink: 0; }
-  .rec-info { color: var(--muted); flex: 1; }
-  .rec-info span { color: var(--green); }
-  .elapsed { font-size: 20px; color: var(--accent); }
+/* ── METRICS ── */
+.metrics-row {
+  display:grid;
+  grid-template-columns:1fr 1fr 1fr;
+  gap:8px;
+  margin-bottom:12px;
+}
+.metric {
+  background: var(--surface);
+  border:1px solid var(--border);
+  border-radius:12px;
+  padding:12px 10px;
+  text-align:center;
+}
+.metric-lbl {
+  font-family:'DM Mono', monospace;
+  font-size:8px;
+  letter-spacing:2.5px;
+  color: var(--dim);
+  text-transform:uppercase;
+  margin-bottom:5px;
+}
+.metric-val {
+  font-family:'Orbitron', monospace;
+  font-size:18px;
+  font-weight:700;
+  color: var(--cyan);
+  line-height:1;
+}
+.metric-val small { font-size:9px; color:var(--dim2); font-family:'DM Mono', monospace; font-weight:400; }
 
-  /* run selector tabs */
-  .run-tabs {
-    display: flex;
-    gap: 6px;
-    flex-wrap: wrap;
-    flex-shrink: 0;
-  }
-  .run-tab {
-    font-family: 'Share Tech Mono', monospace;
-    font-size: 11px;
-    padding: 3px 10px;
-    border-radius: 4px;
-    border: 1px solid;
-    cursor: pointer;
-    transition: all 0.15s;
-    opacity: 0.5;
-  }
-  .run-tab.active { opacity: 1; }
+/* iOS permission overlay */
+.overlay {
+  position:fixed; inset:0;
+  background: rgba(7,9,13,0.97);
+  display:flex; flex-direction:column;
+  align-items:center; justify-content:center;
+  z-index:1000;
+  padding:32px;
+  text-align:center;
+}
+.overlay-icon { font-size:48px; margin-bottom:20px; }
+.overlay h2 {
+  font-family:'Orbitron', monospace;
+  font-size:18px;
+  font-weight:700;
+  color: var(--accent);
+  letter-spacing:2px;
+  margin-bottom:12px;
+}
+.overlay p {
+  font-size:13px;
+  color: var(--dim2);
+  max-width:300px;
+  line-height:1.7;
+  margin-bottom:28px;
+}
+.overlay button {
+  background: var(--accent);
+  color: #07090d;
+  font-family:'Orbitron', monospace;
+  font-size:12px;
+  font-weight:700;
+  letter-spacing:3px;
+  border:none;
+  border-radius:12px;
+  padding:16px 36px;
+  cursor:pointer;
+}
+.overlay.hidden { display:none; }
 
-  .chart-container {
-    flex: 1;
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    padding: 12px;
-    min-height: 0;
-    position: relative;
-  }
-  .chart-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
-  .chart-title  { font-size: 12px; letter-spacing: 3px; color: var(--muted); }
-  .max-badge {
-    font-family: 'Share Tech Mono', monospace; font-size: 12px;
-    color: var(--accent2); background: rgba(255,107,53,0.1);
-    border: 1px solid rgba(255,107,53,0.3); border-radius: 4px; padding: 2px 8px;
-  }
-  canvas { max-height: 100%; }
-
-  .log-panel {
-    background: var(--surface); border: 1px solid var(--border);
-    border-radius: 10px; flex-shrink: 0; max-height: 110px; overflow-y: auto;
-  }
-  .log-panel::-webkit-scrollbar { width: 4px; }
-  .log-panel::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
-
-  .log-row {
-    display: flex; padding: 5px 12px;
-    border-bottom: 1px solid rgba(37,40,48,0.5);
-    font-family: 'Share Tech Mono', monospace; font-size: 12px;
-    gap: 12px; align-items: center;
-  }
-  .log-row:last-child { border-bottom: none; }
-  .log-run   { width: 46px; font-weight: 700; }
-  .log-kmh   { color: var(--accent); width: 55px; }
-  .log-time  { color: var(--green); flex: 1; }
-  .log-delta { color: var(--muted); }
-  .log-empty { padding: 16px; text-align: center; color: var(--muted); font-size: 13px; letter-spacing: 2px; }
+/* Tooltip */
+.tooltip {
+  position:fixed;
+  background: rgba(13,17,23,0.95);
+  border:1px solid var(--border2);
+  border-radius:8px;
+  padding:8px 12px;
+  font-family:'DM Mono', monospace;
+  font-size:11px;
+  color: var(--text);
+  pointer-events:none;
+  display:none;
+  z-index:100;
+  white-space:nowrap;
+}
 </style>
 </head>
 <body>
 
-<header>
-  <div class="logo">v0.9</div>
-  <div class="gps-status">
-    <div class="dot" id="gpsDot"></div>
-    <span id="gpsLabel">GPS OFF</span>
-  </div>
-</header>
+<div class="overlay" id="overlay">
+  <div class="overlay-icon">📡</div>
+  <h2>SENSORI IMU</h2>
+  <p>Questa app usa l'accelerometro ad alta frequenza per stimare la velocità. Su iOS è necessario il permesso esplicito.</p>
+  <button onclick="requestPermission()">AUTORIZZA</button>
+</div>
 
-<div class="main">
+<div class="tooltip" id="tooltip"></div>
 
-  <div class="speed-display">
-    <div class="speed-num" id="speedNum">0</div>
-    <div class="speed-unit">KM/H</div>
+<div class="app">
+
+  <header class="hdr">
+    <div class="logo">V<span>0.10</span></div>
+    <div class="hdr-right">
+      <span class="hz-pill" id="hzPill">-- Hz</span>
+      <div class="live-dot" id="liveDot"></div>
+    </div>
+  </header>
+
+  <!-- Big speed display -->
+  <div class="speed-hero">
+    <div class="speed-row">
+      <div class="speed-num" id="speedNum">0.0</div>
+      <div class="speed-unit">km/h</div>
+    </div>
     <div class="speed-meta">
-      MAX: <span id="maxSpeed">0</span> &nbsp;|&nbsp; ACC: <span id="accVal">—</span> m/s²
+      <span>MAX SESSIONE <span class="val" id="sessionMax">0.0</span> km/h</span>
+      <span>CAMP. <span class="val" id="sampleCount">0</span></span>
+      <span>Δt <span class="val" id="dtMs">-- ms</span></span>
     </div>
   </div>
 
-  <div class="controls">
-    <div class="threshold-group">
-      <label>SOGLIA</label>
-      <input type="number" id="thresholdInput" value="40" min="0" max="300">
-      <label style="color:var(--muted);font-size:11px;">km/h</label>
+  <!-- Active run banner -->
+  <div class="run-banner" id="runBanner">
+    <div class="run-pulse"></div>
+    <span id="runBannerLabel">RUN #1 IN CORSO</span>
+    <div class="run-time" id="runTimerDisplay">0.00s</div>
+  </div>
+
+  <!-- Threshold -->
+  <div class="thresh-card">
+    <div class="thresh-label">SOGLIA</div>
+    <div class="thresh-input-wrap">
+      <div class="thresh-btns">
+        <button class="thresh-btn" onclick="adjThresh(+5)">▲</button>
+        <button class="thresh-btn" onclick="adjThresh(-5)">▼</button>
+      </div>
+      <input class="thresh-input" type="number" id="threshInput" value="40" min="1" max="300" step="1">
+      <span class="thresh-unit-lbl">km/h</span>
     </div>
-    <button class="btn btn-start" id="btnStart" onclick="startTracking()">▶ START</button>
-    <button class="btn btn-stop"  id="btnStop"  onclick="stopTracking()"  style="display:none">■ STOP</button>
-    <button class="btn btn-clear" onclick="clearData()">↺</button>
   </div>
 
-  <div class="rec-bar" id="recBar">
-    <div class="rec-dot"></div>
-    <div class="rec-info">REC &nbsp;|&nbsp; soglia <span id="recThresh">40</span> km/h &nbsp;|&nbsp; picco <span id="recMax">0</span> km/h</div>
-    <div class="elapsed" id="elapsedTime">0.000s</div>
+  <!-- Controls -->
+  <div class="ctrl-row">
+    <button class="btn btn-main" id="btnMain" onclick="toggleSensor()">▶ AVVIA</button>
+    <button class="btn btn-secondary" onclick="resetSession()">RESET</button>
+    <button class="btn btn-secondary" onclick="clearRuns()">CLR RUNS</button>
   </div>
 
-  <!-- run filter tabs (appear as runs accumulate) -->
-  <div class="run-tabs" id="runTabs" style="display:none"></div>
+  <!-- Live metrics -->
+  <div class="metrics-row">
+    <div class="metric">
+      <div class="metric-lbl">ACCEL</div>
+      <div class="metric-val" id="mAccel">0.00 <small>m/s²</small></div>
+    </div>
+    <div class="metric">
+      <div class="metric-lbl">RUN PEAK</div>
+      <div class="metric-val" id="mRunPeak">-- <small>km/h</small></div>
+    </div>
+    <div class="metric">
+      <div class="metric-lbl">RUNS</div>
+      <div class="metric-val" id="mRunCount">0</div>
+    </div>
+  </div>
 
-  <div class="chart-container">
+  <!-- Chart -->
+  <div class="chart-card">
     <div class="chart-header">
-      <div class="chart-title">VELOCITÀ / TEMPO</div>
-      <div class="max-badge" id="maxBadge">MAX: — km/h</div>
+      <div>
+        <div class="chart-title">CURVA VELOCITÀ / TEMPO</div>
+        <div class="chart-legend" id="chartLegend"></div>
+      </div>
     </div>
-    <canvas id="myChart"></canvas>
+    <div class="chart-wrap">
+      <canvas id="chart"></canvas>
+    </div>
   </div>
 
-  <div class="log-panel" id="logPanel">
-    <div class="log-empty">nessun dato registrato</div>
+  <!-- Runs list -->
+  <div class="runs-card">
+    <div class="runs-header">
+      <div class="section-title">RUN SALVATE</div>
+    </div>
+    <div class="run-list" id="runList">
+      <div class="no-runs" id="noRuns">Nessuna run ancora. Avvia il sensore e accelera oltre la soglia.</div>
+    </div>
   </div>
 
 </div>
 
 <script>
-// ═══════════════════════════════════════════════════════════════════════════════
-// CONSTANTS
-// ═══════════════════════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════
+// CONSTANTS & PALETTE
+// ═══════════════════════════════════════════════════════
 const RUN_COLORS = [
-  '#00e5ff','#00ff88','#ff6b35','#c77dff','#ffce00',
-  '#ff3366','#4fc3f7','#a5d6a7','#ffab91','#b39ddb'
+  '#38c8f0','#f0c040','#2deb8a','#ff5f40','#a855f7',
+  '#fb923c','#ec4899','#22d3ee','#84cc16','#f43f5e'
 ];
-function hexToRgba(hex, a) {
-  const r=parseInt(hex.slice(1,3),16),g=parseInt(hex.slice(3,5),16),b=parseInt(hex.slice(5,7),16);
-  return `rgba(${r},${g},${b},${a})`;
-}
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// HERMITE SPLINE
-// Given 4 GPS samples, evaluate speed at any timestamp using Catmull-Rom
-// (a special case of Hermite that auto-computes tangents from neighbours).
-// We use the two samples bracketing the query time as p1,p2 and their
-// neighbours as p0,p3 for tangent estimation.
-// ═══════════════════════════════════════════════════════════════════════════════
-function catmullRom(p0, p1, p2, p3, t) {
-  // t in [0,1] between p1 and p2
-  const t2 = t*t, t3 = t2*t;
-  return 0.5 * (
-    (2*p1) +
-    (-p0 + p2) * t +
-    (2*p0 - 5*p1 + 4*p2 - p3) * t2 +
-    (-p0 + 3*p1 - 3*p2 + p3) * t3
-  );
-}
-
-// Evaluate Hermite-interpolated speed at timestamp `queryTs`
-// using the raw GPS sample buffer. Returns null if out of range.
-function hermiteSpeedAt(samples, queryTs) {
-  if (samples.length < 2) return null;
-  // Find bracketing pair
-  let i = -1;
-  for (let j = 0; j < samples.length - 1; j++) {
-    if (samples[j].ts <= queryTs && samples[j+1].ts >= queryTs) { i = j; break; }
-  }
-  if (i === -1) return null;
-
-  const A = samples[i], B = samples[i+1];
-  const t = (queryTs - A.ts) / (B.ts - A.ts);
-
-  // Get neighbours for Catmull-Rom (clamp at edges)
-  const p0 = (samples[i-1] ?? samples[i]).kmh;
-  const p1 = A.kmh;
-  const p2 = B.kmh;
-  const p3 = (samples[i+2] ?? samples[i+1]).kmh;
-
-  return catmullRom(p0, p1, p2, p3, t);
-}
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// POST-RUN CHART BUILDER
-// After a run ends: generate one chart point every 100ms from t=0 to end,
-// evaluating speed via Catmull-Rom. Keep only points where speed > all previous
-// (strictly ascending envelope = acceleration curve only).
-// ═══════════════════════════════════════════════════════════════════════════════
-function buildChart(samples, startTs) {
-  if (samples.length < 2) return [];
-
-  const endTs   = samples[samples.length - 1].ts;
-  const points  = [];
-  let   peakKmh = -Infinity;
-
-  for (let ts = startTs; ts <= endTs; ts += 100) {
-    const kmh = hermiteSpeedAt(samples, ts);
-    if (kmh === null) continue;
-    if (kmh > peakKmh) {
-      points.push({ x: ts - startTs, y: kmh });
-      peakKmh = kmh;
-    }
-  }
-  // Always include the last sample if it's a new peak
-  const lastKmh = samples[samples.length - 1].kmh;
-  if (lastKmh > peakKmh) {
-    points.push({ x: endTs - startTs, y: lastKmh });
-  }
-  return points;
-}
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// LOG BUILDER — integer km/h crossings via linear interpolation on raw samples
-// ═══════════════════════════════════════════════════════════════════════════════
-function buildLog(samples, startTs) {
-  if (samples.length < 2) return [];
-  const peak = Math.floor(Math.max(...samples.map(s => s.kmh)));
-  const start = Math.ceil(samples[0].kmh);
-  const log = [];
-  for (let k = start; k <= peak; k++) {
-    for (let i = 0; i < samples.length - 1; i++) {
-      const A = samples[i], B = samples[i+1];
-      if (A.kmh <= k && B.kmh > k && B.kmh > A.kmh) {
-        const ratio = (k - A.kmh) / (B.kmh - A.kmh);
-        const crossTs = A.ts + ratio * (B.ts - A.ts);
-        log.push({ kmh: k, time_ms: crossTs - startTs });
-        break;
-      }
-    }
-  }
-  return log;
-}
-
-// ═══════════════════════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════
 // STATE
-// ═══════════════════════════════════════════════════════════════════════════════
-let watchId          = null;
-let isTracking       = false;
-let isRecording      = false;
-let prevGpsKmh       = null;
-let prevGpsTs        = null;
-let recordingStartTs = null;
-let maxSpeedSession  = 0;
-let currentSamples   = [];   // raw GPS buffer for current run
+// ═══════════════════════════════════════════════════════
+let sensorActive = false;
+let lastTime = null;
+let lastRawX = 0, lastRawY = 0, lastRawZ = 0;
 
-// runs[i] = { color, recordingStartTs, rawSamples, logPoints, chartPoints }
-const runs       = [];
-let activeRunIdx = null;
+// Velocity (m/s)
+let vx = 0, vy = 0, vz = 0;
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// CHART SETUP
-// ═══════════════════════════════════════════════════════════════════════════════
-const ctx   = document.getElementById('myChart').getContext('2d');
-const chart = new Chart(ctx, {
-  type: 'line',
-  data: { datasets: [] },
-  options: {
-    responsive: true, maintainAspectRatio: false,
-    animation: { duration: 500 },
-    plugins: {
-      legend: { display: true, labels: { color:'#5a5f72', font:{family:'Share Tech Mono',size:10}, boxWidth:14, padding:8 } },
-      tooltip: {
-        mode:'nearest', intersect:false,
-        backgroundColor:'#1a1d24', titleColor:'#00e5ff', bodyColor:'#e8eaf0', borderColor:'#252830', borderWidth:1,
-        callbacks: {
-          title: items => items[0].raw.y.toFixed(2) + ' km/h',
-          label: item  => item.dataset.label + '  T+ ' + (item.raw.x/1000).toFixed(3) + 's'
+// High-pass filter (gravity removal)
+const HP = 0.88;
+let hpX = 0, hpY = 0, hpZ = 0;
+
+// Zero-velocity drift correction
+let zeroCnt = 0;
+const ZERO_THR = 0.10; // m/s²
+const ZERO_WIN = 12;
+const ZERO_DECAY = 0.80;
+
+// Frequency
+let freqBuf = [];
+
+// Session
+let sessionMax = 0;
+let totalSamples = 0;
+
+// Threshold (km/h)
+let threshold = 40;
+
+// Runs
+let runs = [];           // completed runs
+let activeRun = null;    // { id, points:[{t_ms, v_kmh}], startTs, color, peak }
+let runIdCounter = 0;
+
+// Above threshold tracking
+let wasAbove = false;
+let threshCrossingTs = null; // timestamp when crossed above threshold
+let runTimerRAF = null;
+
+// Visibility (which runs shown on chart)
+let hiddenRuns = new Set();
+
+// Chart hover
+let hoverPoint = null;
+
+// ═══════════════════════════════════════════════════════
+// SENSOR
+// ═══════════════════════════════════════════════════════
+function motionHandler(e) {
+  const acc = e.accelerationIncludingGravity || e.acceleration;
+  if (!acc) return;
+
+  const ax_raw = (acc.x || 0);
+  const ay_raw = (acc.y || 0);
+  const az_raw = (acc.z || 0);
+  const now = performance.now();
+
+  if (lastTime !== null) {
+    const dt = (now - lastTime) / 1000; // seconds
+
+    // Frequency
+    if (dt > 0) {
+      freqBuf.push(1 / dt);
+      if (freqBuf.length > 40) freqBuf.shift();
+      const hz = freqBuf.reduce((a,b)=>a+b,0)/freqBuf.length;
+      document.getElementById('hzPill').textContent = hz.toFixed(1) + ' Hz';
+      document.getElementById('dtMs').textContent = (dt*1000).toFixed(1) + ' ms';
+    }
+
+    if (dt < 0.5 && dt > 0) {
+      // High-pass: remove gravity
+      hpX = HP * (hpX + ax_raw - lastRawX);
+      hpY = HP * (hpY + ay_raw - lastRawY);
+      hpZ = HP * (hpZ + az_raw - lastRawZ);
+
+      const totalAccel = Math.sqrt(hpX*hpX + hpY*hpY + hpZ*hpZ);
+
+      // Zero-velocity detector
+      if (totalAccel < ZERO_THR) {
+        zeroCnt++;
+        if (zeroCnt >= ZERO_WIN) {
+          vx *= ZERO_DECAY; vy *= ZERO_DECAY; vz *= ZERO_DECAY;
+          if (Math.abs(vx)<0.003) vx=0;
+          if (Math.abs(vy)<0.003) vy=0;
+          if (Math.abs(vz)<0.003) vz=0;
         }
+      } else {
+        zeroCnt = 0;
+        vx += hpX * dt;
+        vy += hpY * dt;
+        vz += hpZ * dt;
       }
-    },
-    scales: {
-      x: {
-        type:'linear',
-        title:{display:true,text:'Tempo (s)',color:'#5a5f72',font:{family:'Share Tech Mono',size:11}},
-        grid:{color:'rgba(37,40,48,0.9)'},
-        ticks:{color:'#5a5f72',font:{family:'Share Tech Mono',size:10},maxTicksLimit:8,callback:v=>(v/1000).toFixed(1)+'s'}
-      },
-      y: {
-        title:{display:true,text:'km/h',color:'#5a5f72',font:{family:'Share Tech Mono',size:11}},
-        grid:{color:'rgba(37,40,48,0.9)'},
-        ticks:{color:'#5a5f72',font:{family:'Share Tech Mono',size:10},stepSize:5},
-        beginAtZero:false
-      }
+
+      const speed_ms = Math.sqrt(vx*vx + vy*vy + vz*vz);
+      const speed_kmh = speed_ms * 3.6;
+
+      totalSamples++;
+      if (speed_kmh > sessionMax) sessionMax = speed_kmh;
+
+      // Run management
+      handleRunLogic(speed_kmh, now);
+
+      // UI update
+      updateSpeedUI(speed_kmh, totalAccel);
     }
   }
+
+  lastRawX = ax_raw; lastRawY = ay_raw; lastRawZ = az_raw;
+  lastTime = now;
+}
+
+// ═══════════════════════════════════════════════════════
+// RUN LOGIC
+// ═══════════════════════════════════════════════════════
+function handleRunLogic(speed_kmh, now) {
+  const above = speed_kmh >= threshold;
+
+  if (!wasAbove && above) {
+    // Just crossed threshold upward → start new run
+    startNewRun(now);
+    wasAbove = true;
+  }
+
+  if (wasAbove && above && activeRun) {
+    // Still above: record point, time = now - crossing ts
+    const t_ms = now - activeRun.startTs;
+    activeRun.points.push({ t_ms, v_kmh: speed_kmh });
+    if (speed_kmh > activeRun.peak) activeRun.peak = speed_kmh;
+    document.getElementById('mRunPeak').textContent = activeRun.peak.toFixed(1);
+    drawChart();
+  }
+
+  if (wasAbove && !above) {
+    // Dropped below threshold → close run
+    if (activeRun && activeRun.points.length >= 3) {
+      finishRun();
+    } else if (activeRun) {
+      activeRun = null; // too short, discard
+    }
+    wasAbove = false;
+    hideBanner();
+  }
+}
+
+function startNewRun(ts) {
+  runIdCounter++;
+  const colorIdx = (runIdCounter - 1) % RUN_COLORS.length;
+  activeRun = {
+    id: runIdCounter,
+    points: [],
+    startTs: ts,
+    color: RUN_COLORS[colorIdx],
+    peak: 0,
+    duration: 0,
+    completed: false
+  };
+  showBanner(runIdCounter);
+  startRunTimer();
+}
+
+function finishRun() {
+  if (!activeRun) return;
+  activeRun.duration = activeRun.points[activeRun.points.length-1].t_ms;
+  activeRun.completed = true;
+  runs.push({ ...activeRun });
+  activeRun = null;
+  stopRunTimer();
+  hideBanner();
+  renderRunList();
+  renderLegend();
+  drawChart();
+  document.getElementById('mRunCount').textContent = runs.length;
+}
+
+// ═══════════════════════════════════════════════════════
+// RUN TIMER
+// ═══════════════════════════════════════════════════════
+function startRunTimer() {
+  stopRunTimer();
+  function tick() {
+    if (!activeRun) return;
+    const elapsed = (performance.now() - activeRun.startTs) / 1000;
+    document.getElementById('runTimerDisplay').textContent = elapsed.toFixed(2) + 's';
+    runTimerRAF = requestAnimationFrame(tick);
+  }
+  runTimerRAF = requestAnimationFrame(tick);
+}
+function stopRunTimer() {
+  if (runTimerRAF) { cancelAnimationFrame(runTimerRAF); runTimerRAF = null; }
+}
+function showBanner(id) {
+  const b = document.getElementById('runBanner');
+  b.classList.add('active');
+  document.getElementById('runBannerLabel').textContent = `RUN #${id} IN CORSO`;
+}
+function hideBanner() {
+  document.getElementById('runBanner').classList.remove('active');
+  document.getElementById('runTimerDisplay').textContent = '0.00s';
+}
+
+// ═══════════════════════════════════════════════════════
+// UI UPDATES
+// ═══════════════════════════════════════════════════════
+function updateSpeedUI(speed_kmh, accel) {
+  const el = document.getElementById('speedNum');
+  el.textContent = speed_kmh.toFixed(1);
+  el.className = 'speed-num';
+  if (speed_kmh >= threshold) el.classList.add('above');
+  else el.classList.add('running');
+
+  document.getElementById('sessionMax').textContent = sessionMax.toFixed(1);
+  document.getElementById('sampleCount').textContent = totalSamples;
+  document.getElementById('mAccel').innerHTML = accel.toFixed(2) + ' <small>m/s²</small>';
+}
+
+// ═══════════════════════════════════════════════════════
+// CHART
+// ═══════════════════════════════════════════════════════
+const chartCanvas = document.getElementById('chart');
+const ctx2 = chartCanvas.getContext('2d');
+
+function drawChart() {
+  // Resize canvas to device pixel ratio
+  const rect = chartCanvas.getBoundingClientRect();
+  const dpr = window.devicePixelRatio || 1;
+  chartCanvas.width = rect.width * dpr;
+  chartCanvas.height = rect.height * dpr;
+  ctx2.scale(dpr, dpr);
+  const W = rect.width;
+  const H = rect.height;
+
+  ctx2.clearRect(0, 0, W, H);
+
+  // Collect all runs to display (completed + active)
+  const allRuns = [...runs.filter(r => !hiddenRuns.has(r.id))];
+  if (activeRun && activeRun.points.length > 1) allRuns.push(activeRun);
+
+  if (allRuns.length === 0 || allRuns.every(r => r.points.length < 2)) {
+    // Empty state
+    ctx2.font = '11px DM Mono, monospace';
+    ctx2.fillStyle = '#4a6880';
+    ctx2.textAlign = 'center';
+    ctx2.fillText('Nessun dato — avvia il sensore e accelera', W/2, H/2);
+    return;
+  }
+
+  // Find max values across all visible runs
+  let maxT = 0, maxV = 0;
+  for (const run of allRuns) {
+    for (const pt of run.points) {
+      if (pt.t_ms > maxT) maxT = pt.t_ms;
+      if (pt.v_kmh > maxV) maxV = pt.v_kmh;
+    }
+  }
+  maxV = Math.max(maxV * 1.12, threshold * 1.3);
+  maxT = Math.max(maxT * 1.08, 1000);
+
+  const PAD = { top: 14, right: 16, bottom: 36, left: 46 };
+  const plotW = W - PAD.left - PAD.right;
+  const plotH = H - PAD.top - PAD.bottom;
+
+  // Map functions
+  const mx = t => PAD.left + (t / maxT) * plotW;
+  const my = v => PAD.top + plotH - (v / maxV) * plotH;
+
+  // Grid
+  ctx2.strokeStyle = 'rgba(28,42,56,0.9)';
+  ctx2.lineWidth = 1;
+  const vTicks = 5;
+  for (let i = 0; i <= vTicks; i++) {
+    const v = (maxV / vTicks) * i;
+    const y = my(v);
+    ctx2.beginPath(); ctx2.moveTo(PAD.left, y); ctx2.lineTo(PAD.left + plotW, y); ctx2.stroke();
+    ctx2.font = '9px DM Mono, monospace';
+    ctx2.fillStyle = '#4a6880';
+    ctx2.textAlign = 'right';
+    ctx2.fillText(v.toFixed(0), PAD.left - 6, y + 3);
+  }
+  const tTicks = 5;
+  for (let i = 0; i <= tTicks; i++) {
+    const t = (maxT / tTicks) * i;
+    const x = mx(t);
+    ctx2.beginPath(); ctx2.moveTo(x, PAD.top); ctx2.lineTo(x, PAD.top + plotH); ctx2.stroke();
+    ctx2.font = '9px DM Mono, monospace';
+    ctx2.fillStyle = '#4a6880';
+    ctx2.textAlign = 'center';
+    ctx2.fillText((t/1000).toFixed(1) + 's', x, PAD.top + plotH + 16);
+  }
+
+  // Axes labels
+  ctx2.save();
+  ctx2.translate(11, PAD.top + plotH/2);
+  ctx2.rotate(-Math.PI/2);
+  ctx2.font = '9px DM Mono, monospace';
+  ctx2.fillStyle = '#4a6880';
+  ctx2.textAlign = 'center';
+  ctx2.fillText('km/h', 0, 0);
+  ctx2.restore();
+  ctx2.font = '9px DM Mono, monospace';
+  ctx2.fillStyle = '#4a6880';
+  ctx2.textAlign = 'center';
+  ctx2.fillText('tempo (s)', PAD.left + plotW/2, H - 4);
+
+  // Threshold line
+  const ty = my(threshold);
+  ctx2.setLineDash([4, 4]);
+  ctx2.strokeStyle = 'rgba(240,192,64,0.3)';
+  ctx2.lineWidth = 1;
+  ctx2.beginPath(); ctx2.moveTo(PAD.left, ty); ctx2.lineTo(PAD.left+plotW, ty); ctx2.stroke();
+  ctx2.setLineDash([]);
+  ctx2.font = '9px DM Mono, monospace';
+  ctx2.fillStyle = 'rgba(240,192,64,0.5)';
+  ctx2.textAlign = 'left';
+  ctx2.fillText('soglia ' + threshold + ' km/h', PAD.left + 4, ty - 4);
+
+  // Draw each run
+  for (const run of allRuns) {
+    if (run.points.length < 2) continue;
+    const col = run.color;
+
+    // Area fill
+    ctx2.beginPath();
+    ctx2.moveTo(mx(run.points[0].t_ms), my(run.points[0].v_kmh));
+    for (let i = 1; i < run.points.length; i++) {
+      ctx2.lineTo(mx(run.points[i].t_ms), my(run.points[i].v_kmh));
+    }
+    ctx2.lineTo(mx(run.points[run.points.length-1].t_ms), my(threshold));
+    ctx2.lineTo(mx(run.points[0].t_ms), my(threshold));
+    ctx2.closePath();
+    ctx2.fillStyle = col.replace('#', 'rgba(').replace(/(..)(..)(..)/, (m,r,g,b) =>
+      `${parseInt(r,16)},${parseInt(g,16)},${parseInt(b,16)}`) + ',0.07)';
+    // simpler fill
+    ctx2.globalAlpha = 0.09;
+    ctx2.fillStyle = col;
+    ctx2.fill();
+    ctx2.globalAlpha = 1;
+
+    // Line
+    ctx2.beginPath();
+    ctx2.moveTo(mx(run.points[0].t_ms), my(run.points[0].v_kmh));
+    for (let i = 1; i < run.points.length; i++) {
+      ctx2.lineTo(mx(run.points[i].t_ms), my(run.points[i].v_kmh));
+    }
+    ctx2.strokeStyle = col;
+    ctx2.lineWidth = 2.2;
+    ctx2.lineJoin = 'round';
+    ctx2.shadowColor = col;
+    ctx2.shadowBlur = 6;
+    ctx2.stroke();
+    ctx2.shadowBlur = 0;
+
+    // Peak dot
+    const peakPt = run.points.reduce((a,b) => b.v_kmh > a.v_kmh ? b : a);
+    ctx2.beginPath();
+    ctx2.arc(mx(peakPt.t_ms), my(peakPt.v_kmh), 4.5, 0, Math.PI*2);
+    ctx2.fillStyle = col;
+    ctx2.shadowColor = col;
+    ctx2.shadowBlur = 10;
+    ctx2.fill();
+    ctx2.shadowBlur = 0;
+  }
+
+  // Axes border
+  ctx2.strokeStyle = '#1c2a38';
+  ctx2.lineWidth = 1;
+  ctx2.strokeRect(PAD.left, PAD.top, plotW, plotH);
+}
+
+// ═══════════════════════════════════════════════════════
+// RUNS LIST
+// ═══════════════════════════════════════════════════════
+function renderRunList() {
+  const list = document.getElementById('runList');
+  const noRuns = document.getElementById('noRuns');
+
+  if (runs.length === 0) {
+    noRuns.style.display = 'block';
+    list.innerHTML = '';
+    list.appendChild(noRuns);
+    return;
+  }
+  noRuns.style.display = 'none';
+
+  list.innerHTML = '';
+  [...runs].reverse().forEach(run => {
+    const dur = (run.duration / 1000).toFixed(2);
+    const pts = run.points.length;
+    const div = document.createElement('div');
+    div.className = 'run-item' + (hiddenRuns.has(run.id) ? ' faded' : '');
+    div.dataset.id = run.id;
+    div.innerHTML = `
+      <div class="run-color" style="background:${run.color}"></div>
+      <div class="run-info">
+        <div class="run-name">RUN #${run.id}</div>
+        <div class="run-sub">${dur}s · ${pts} campioni · soglia ${threshold} km/h</div>
+      </div>
+      <div class="run-peak">${run.peak.toFixed(1)} <small>km/h</small></div>
+      <button class="run-del" onclick="deleteRun(${run.id}, event)">✕</button>
+    `;
+    div.addEventListener('click', () => toggleRunVisibility(run.id));
+    list.appendChild(div);
+  });
+  document.getElementById('mRunCount').textContent = runs.length;
+}
+
+function toggleRunVisibility(id) {
+  if (hiddenRuns.has(id)) hiddenRuns.delete(id);
+  else hiddenRuns.add(id);
+  renderRunList();
+  renderLegend();
+  drawChart();
+}
+
+function deleteRun(id, e) {
+  e.stopPropagation();
+  runs = runs.filter(r => r.id !== id);
+  hiddenRuns.delete(id);
+  renderRunList();
+  renderLegend();
+  drawChart();
+}
+
+function renderLegend() {
+  const leg = document.getElementById('chartLegend');
+  leg.innerHTML = '';
+  runs.forEach(run => {
+    const item = document.createElement('div');
+    item.className = 'legend-item' + (hiddenRuns.has(run.id) ? ' faded' : '');
+    item.innerHTML = `<div class="legend-dot" style="background:${run.color}"></div>#${run.id} ${run.peak.toFixed(0)}km/h`;
+    item.addEventListener('click', () => toggleRunVisibility(run.id));
+    leg.appendChild(item);
+  });
+}
+
+// ═══════════════════════════════════════════════════════
+// CONTROLS
+// ═══════════════════════════════════════════════════════
+function toggleSensor() {
+  if (!sensorActive) {
+    sensorActive = true;
+    window.addEventListener('devicemotion', motionHandler);
+    document.getElementById('btnMain').textContent = '■ FERMA';
+    document.getElementById('btnMain').classList.add('stop');
+    document.getElementById('liveDot').classList.add('on');
+  } else {
+    sensorActive = false;
+    window.removeEventListener('devicemotion', motionHandler);
+    document.getElementById('btnMain').textContent = '▶ AVVIA';
+    document.getElementById('btnMain').classList.remove('stop');
+    document.getElementById('liveDot').classList.remove('on');
+    // Close active run if any
+    if (activeRun && activeRun.points.length >= 3) finishRun();
+    else { activeRun = null; stopRunTimer(); hideBanner(); }
+    lastTime = null;
+  }
+}
+
+function resetSession() {
+  if (activeRun && activeRun.points.length >= 3) finishRun();
+  activeRun = null; wasAbove = false;
+  vx=0; vy=0; vz=0;
+  hpX=0; hpY=0; hpZ=0;
+  zeroCnt=0; lastTime=null;
+  sessionMax=0; totalSamples=0;
+  freqBuf=[];
+  stopRunTimer(); hideBanner();
+  document.getElementById('speedNum').textContent = '0.0';
+  document.getElementById('speedNum').className = 'speed-num';
+  document.getElementById('sessionMax').textContent = '0.0';
+  document.getElementById('sampleCount').textContent = '0';
+  document.getElementById('dtMs').textContent = '-- ms';
+  document.getElementById('mAccel').innerHTML = '0.00 <small>m/s²</small>';
+  document.getElementById('mRunPeak').textContent = '--';
+  document.getElementById('hzPill').textContent = '-- Hz';
+  drawChart();
+}
+
+function clearRuns() {
+  runs=[]; hiddenRuns.clear(); runIdCounter=0;
+  renderRunList(); renderLegend(); drawChart();
+  document.getElementById('mRunCount').textContent = '0';
+}
+
+function adjThresh(delta) {
+  const inp = document.getElementById('threshInput');
+  let v = parseInt(inp.value)||40;
+  v = Math.max(1, Math.min(300, v + delta));
+  inp.value = v;
+  threshold = v;
+}
+
+document.getElementById('threshInput').addEventListener('input', function() {
+  let v = parseInt(this.value);
+  if (!isNaN(v) && v >= 1 && v <= 300) { threshold = v; drawChart(); }
 });
 
-function makeDataset(runIdx, color) {
-  return {
-    label: 'Run ' + (runIdx+1), data: [],
-    borderColor: color, backgroundColor: hexToRgba(color, 0.06),
-    borderWidth: 2.5, pointRadius: 0, pointHoverRadius: 5,
-    pointHoverBackgroundColor: color, tension: 0, fill: false,
-  };
-}
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// CONTROLS
-// ═══════════════════════════════════════════════════════════════════════════════
-function startTracking() {
-  if (!navigator.geolocation) { alert('Geolocalizzazione non supportata.'); return; }
-  isTracking = true;
-  document.getElementById('btnStart').style.display = 'none';
-  document.getElementById('btnStop').style.display  = '';
-  document.getElementById('gpsDot').className       = 'dot searching';
-  document.getElementById('gpsLabel').textContent   = 'RICERCA...';
-  watchId = navigator.geolocation.watchPosition(onPosition, onError, {
-    enableHighAccuracy: true, maximumAge: 0, timeout: 10000
-  });
-  elapsedLoop();
-}
-
-function stopTracking() {
-  if (isRecording) finaliseRun();
-  isTracking = false;
-  if (watchId !== null) { navigator.geolocation.clearWatch(watchId); watchId = null; }
-  document.getElementById('btnStart').style.display = '';
-  document.getElementById('btnStop').style.display  = 'none';
-  document.getElementById('recBar').classList.remove('show');
-  document.getElementById('gpsDot').className       = 'dot';
-  document.getElementById('gpsLabel').textContent   = 'GPS OFF';
-}
-
-function clearData() {
-  runs.length = 0; currentSamples = [];
-  maxSpeedSession = 0; isRecording = false;
-  recordingStartTs = null; prevGpsKmh = null; prevGpsTs = null; activeRunIdx = null;
-  document.getElementById('recBar').classList.remove('show');
-  document.getElementById('maxSpeed').textContent = '0';
-  document.getElementById('maxBadge').textContent = 'MAX: — km/h';
-  document.getElementById('runTabs').style.display = 'none';
-  document.getElementById('runTabs').innerHTML = '';
-  chart.data.datasets = []; chart.update(); renderLog();
-}
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// FINALISE RUN
-// ═══════════════════════════════════════════════════════════════════════════════
-function finaliseRun() {
-  isRecording = false;
-  document.getElementById('recBar').classList.remove('show');
-  document.getElementById('elapsedTime').textContent = '—';
-  if (currentSamples.length < 2) return;
-
-  const runIdx   = runs.length - 1;
-  const run      = runs[runIdx];
-  run.rawSamples = currentSamples.slice();
-
-  const chartPts = buildChart(run.rawSamples, run.recordingStartTs);
-  const logPts   = buildLog(run.rawSamples, run.recordingStartTs);
-  run.chartPoints = chartPts;
-  run.logPoints   = logPts;
-
-  chart.data.datasets[runIdx].data = chartPts;
-  chart.update();
-  currentSamples = [];
-  renderLog();
-}
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// GPS CALLBACK
-// ═══════════════════════════════════════════════════════════════════════════════
-function onPosition(pos) {
-  document.getElementById('gpsDot').className     = 'dot active';
-  document.getElementById('gpsLabel').textContent = 'GPS LIVE';
-
-  const curKmh = (pos.coords.speed || 0) * 3.6;
-  const curTs  = pos.timestamp;
-  const thresh = parseFloat(document.getElementById('thresholdInput').value) || 40;
-
-  // display
-  document.getElementById('speedNum').textContent = Math.round(curKmh);
-  document.getElementById('speedNum').className   = 'speed-num' + (isRecording ? ' above-threshold' : '');
-
-  if (prevGpsTs !== null) {
-    const dt = (curTs - prevGpsTs) / 1000;
-    if (dt > 0) document.getElementById('accVal').textContent =
-      ((curKmh - prevGpsKmh) / 3.6 / dt).toFixed(2);
-  }
-  if (curKmh > maxSpeedSession) {
-    maxSpeedSession = curKmh;
-    document.getElementById('maxSpeed').textContent = Math.round(maxSpeedSession);
-    document.getElementById('maxBadge').textContent = 'MAX: ' + Math.round(maxSpeedSession) + ' km/h';
-  }
-
-  // start new run
-  if (!isRecording) {
-    const crossedUp    = prevGpsKmh !== null && prevGpsKmh < thresh && curKmh >= thresh;
-    const alreadyAbove = prevGpsKmh === null && curKmh >= thresh;
-    if (crossedUp || alreadyAbove) {
-      isRecording = true;
-      if (crossedUp && curKmh !== prevGpsKmh) {
-        const r = (thresh - prevGpsKmh) / (curKmh - prevGpsKmh);
-        recordingStartTs = prevGpsTs + r * (curTs - prevGpsTs);
-      } else {
-        recordingStartTs = curTs;
-      }
-      currentSamples = [{ ts: recordingStartTs, kmh: thresh }];
-      const runIdx = runs.length;
-      const color  = RUN_COLORS[runIdx % RUN_COLORS.length];
-      runs.push({ color, recordingStartTs, rawSamples: [], logPoints: [], chartPoints: [] });
-      chart.data.datasets.push(makeDataset(runIdx, color));
-      addRunTab(runIdx, color);
-      document.getElementById('recBar').classList.add('show');
-      document.getElementById('recThresh').textContent = thresh;
-      document.getElementById('recMax').textContent    = '0';
-    }
-  }
-
-  if (isRecording) {
-    // Only push if timestamp is new (avoid duplicates)
-    if (currentSamples.length === 0 || curTs > currentSamples[currentSamples.length - 1].ts) {
-      currentSamples.push({ ts: curTs, kmh: curKmh });
-    }
-    document.getElementById('recMax').textContent = Math.round(maxSpeedSession);
-    if (curKmh < thresh) finaliseRun();
-  }
-
-  prevGpsKmh = curKmh;
-  prevGpsTs  = curTs;
-}
-
-// ── Run selector tabs ─────────────────────────────────────────────────────────
-function addRunTab(runIdx, color) {
-  const tabs = document.getElementById('runTabs');
-  tabs.style.display = 'flex';
-  if (tabs.children.length === 0) {
-    const all = document.createElement('div');
-    all.className = 'run-tab active'; all.textContent = 'TUTTI';
-    all.style.borderColor = '#5a5f72'; all.style.color = '#5a5f72';
-    all.onclick = () => selectRun(null); tabs.appendChild(all);
-  }
-  const tab = document.createElement('div');
-  tab.className = 'run-tab'; tab.id = 'tab-'+runIdx;
-  tab.textContent = 'Run '+(runIdx+1);
-  tab.style.borderColor = color; tab.style.color = color;
-  tab.onclick = () => selectRun(runIdx); tabs.appendChild(tab);
-}
-
-function selectRun(idx) {
-  activeRunIdx = idx;
-  const tabs = document.getElementById('runTabs');
-  Array.from(tabs.children).forEach((t,i) => {
-    t.classList.toggle('active', (idx===null&&i===0)||(idx!==null&&i===idx+1));
-  });
-  chart.data.datasets.forEach((ds,i) => { ds.hidden = idx!==null && i!==idx; });
-  chart.update('none'); renderLog();
-}
-
-// ── Elapsed loop ──────────────────────────────────────────────────────────────
-function elapsedLoop() {
-  if (!isTracking) return;
-  if (isRecording && recordingStartTs !== null) {
-    const t = Date.now() - recordingStartTs;
-    document.getElementById('elapsedTime').textContent = (t/1000).toFixed(3)+'s';
-  }
-  requestAnimationFrame(elapsedLoop);
-}
-
-// ── Log render ────────────────────────────────────────────────────────────────
-function renderLog() {
-  const panel = document.getElementById('logPanel');
-  let rows = [];
-  if (activeRunIdx !== null) {
-    runs[activeRunIdx]?.logPoints.forEach(p => rows.push({...p, runIdx: activeRunIdx}));
+// ═══════════════════════════════════════════════════════
+// PERMISSION
+// ═══════════════════════════════════════════════════════
+function requestPermission() {
+  if (typeof DeviceMotionEvent !== 'undefined' &&
+      typeof DeviceMotionEvent.requestPermission === 'function') {
+    DeviceMotionEvent.requestPermission().then(s => {
+      if (s === 'granted') document.getElementById('overlay').classList.add('hidden');
+      else alert('Permesso negato. Abilita i sensori nelle impostazioni Safari.');
+    }).catch(console.error);
   } else {
-    runs.forEach((r,i) => r.logPoints.forEach(p => rows.push({...p, runIdx: i})));
+    document.getElementById('overlay').classList.add('hidden');
   }
-  if (rows.length === 0) { panel.innerHTML = '<div class="log-empty">nessun dato registrato</div>'; return; }
-  let html = '', prevTime = null, prevRun = null;
-  for (const row of rows) {
-    const color = RUN_COLORS[row.runIdx % RUN_COLORS.length];
-    const delta = (row.runIdx === prevRun && prevTime !== null)
-      ? '+' + ((row.time_ms - prevTime)/1000).toFixed(3)+'s' : '—';
-    html += `<div class="log-row">
-      <div class="log-run" style="color:${color}">R${row.runIdx+1}</div>
-      <div class="log-kmh">${row.kmh} km/h</div>
-      <div class="log-time">T+ ${(row.time_ms/1000).toFixed(3)}s</div>
-      <div class="log-delta">${delta}</div>
-    </div>`;
-    prevTime = row.time_ms; prevRun = row.runIdx;
-  }
-  panel.innerHTML = html; panel.scrollTop = panel.scrollHeight;
 }
 
-// ── Error ─────────────────────────────────────────────────────────────────────
-function onError(err) {
-  document.getElementById('gpsDot').className     = 'dot';
-  document.getElementById('gpsLabel').textContent = 'ERRORE';
-  console.warn('GPS error', err.code, err.message);
+function init() {
+  if (typeof DeviceMotionEvent === 'undefined') {
+    document.getElementById('overlay').querySelector('p').textContent =
+      'DeviceMotionEvent non supportato su questo dispositivo. Usa uno smartphone.';
+    return;
+  }
+  if (typeof DeviceMotionEvent.requestPermission !== 'function') {
+    // Android / non-iOS: no permission needed
+    document.getElementById('overlay').classList.add('hidden');
+  }
+  // else iOS: keep overlay visible until user taps
+
+  drawChart();
+  renderRunList();
+
+  window.addEventListener('resize', () => drawChart());
 }
+
+init();
 </script>
-
 </body>
 </html>
