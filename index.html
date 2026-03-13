@@ -3,598 +3,404 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<title>SpeedCurve Pro</title>
+<title>SpeedCurve</title>
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=Share+Tech+Mono&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=DM+Mono:wght@300;400;500&family=DM+Sans:wght@300;400;600&display=swap');
 
 :root {
-  --bg:       #050709;
-  --s1:       #0b0f14;
-  --s2:       #0f151d;
-  --border:   #182030;
-  --border2:  #223040;
-  --gold:     #e8b84b;
-  --gold2:    #ffd97a;
-  --cyan:     #2de0c8;
-  --red:      #ff4060;
-  --green:    #30e878;
-  --blue:     #4a9eff;
-  --purple:   #c070ff;
-  --orange:   #ff7840;
-  --text:     #c8dce8;
-  --dim:      #3a5060;
-  --dim2:     #5a7890;
-  --font-mono: 'Share Tech Mono', monospace;
-  --font-ui:   'Rajdhani', sans-serif;
+  --bg:       #07090d;
+  --surface:  #0d1117;
+  --panel:    #111820;
+  --border:   #1c2a38;
+  --border2:  #243447;
+  --accent:   #f0c040;
+  --accent2:  #ff5f40;
+  --cyan:     #38c8f0;
+  --green:    #2deb8a;
+  --purple:   #a855f7;
+  --text:     #d4e4f4;
+  --dim:      #4a6880;
+  --dim2:     #6a8aaa;
+  --danger:   #ff3355;
 }
 
-*, *::before, *::after { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
-html { background: var(--bg); }
-body {
+* { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+
+html, body {
   background: var(--bg);
   color: var(--text);
-  font-family: var(--font-ui);
-  min-height: 100dvh;
+  font-family: 'DM Sans', sans-serif;
+  min-height: 100vh;
   overflow-x: hidden;
 }
 
-/* Animated corner grid */
-.grid-bg {
-  position: fixed; inset: 0; z-index: 0; pointer-events: none;
-  background-image:
-    linear-gradient(rgba(45,224,200,0.018) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(45,224,200,0.018) 1px, transparent 1px);
-  background-size: 44px 44px;
-}
-/* Vignette */
-.grid-bg::after {
+/* Scanline overlay */
+body::after {
   content:'';
-  position:absolute; inset:0;
-  background: radial-gradient(ellipse at center, transparent 40%, rgba(5,7,9,0.85) 100%);
+  position:fixed; inset:0;
+  background: repeating-linear-gradient(
+    0deg, transparent, transparent 2px,
+    rgba(0,0,0,0.06) 2px, rgba(0,0,0,0.06) 4px
+  );
+  pointer-events:none; z-index:999;
 }
 
-.wrap {
-  position: relative; z-index: 1;
-  max-width: 500px;
-  margin: 0 auto;
-  padding: 14px 12px 40px;
+/* Grid bg */
+body::before {
+  content:'';
+  position:fixed; inset:0;
+  background-image:
+    linear-gradient(rgba(56,200,240,0.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(56,200,240,0.025) 1px, transparent 1px);
+  background-size: 48px 48px;
+  pointer-events:none; z-index:0;
 }
 
-/* ── HEADER ─────────────────────────────── */
+.app {
+  position:relative; z-index:1;
+  max-width:520px; margin:0 auto;
+  padding:16px 14px 32px;
+}
+
+/* ── HEADER ── */
 .hdr {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 16px;
+  display:flex; align-items:center; justify-content:space-between;
+  margin-bottom:18px; padding-bottom:12px;
+  border-bottom:1px solid var(--border);
 }
 .logo {
-  font-family: var(--font-ui);
-  font-size: 22px;
-  font-weight: 700;
-  letter-spacing: 4px;
-  color: var(--gold);
-  text-transform: uppercase;
-  text-shadow: 0 0 24px rgba(232,184,75,0.4);
+  font-family:'Orbitron', monospace; font-size:16px; font-weight:900;
+  letter-spacing:3px; color: var(--accent);
+  text-shadow: 0 0 20px rgba(240,192,64,0.4);
 }
-.logo em { color: var(--cyan); font-style: normal; }
-.hdr-chips { display: flex; gap: 7px; align-items: center; }
-.chip {
-  font-family: var(--font-mono);
-  font-size: 10px;
-  letter-spacing: 1.5px;
-  padding: 3px 9px;
-  border-radius: 20px;
-  border: 1px solid var(--border2);
-  color: var(--dim2);
-  transition: all .3s;
-  white-space: nowrap;
+.logo span { color: var(--cyan); }
+.hdr-right { display:flex; align-items:center; gap:8px; }
+.hz-pill {
+  font-family:'DM Mono', monospace; font-size:10px; letter-spacing:2px;
+  color: var(--cyan); border:1px solid rgba(56,200,240,0.3);
+  border-radius:20px; padding:3px 10px;
 }
-.chip.ok   { color: var(--green);  border-color: rgba(48,232,120,.3); }
-.chip.warn { color: var(--gold);   border-color: rgba(232,184,75,.3); }
-.chip.err  { color: var(--red);    border-color: rgba(255,64,96,.3);  }
+.gps-pill {
+  font-family:'DM Mono', monospace; font-size:10px; letter-spacing:1.5px;
+  color: var(--dim2); border:1px solid var(--border);
+  border-radius:20px; padding:3px 10px; transition:all .3s;
+}
+.gps-pill.ok  { color: var(--green); border-color:rgba(45,235,138,.3); }
+.gps-pill.err { color: var(--danger); border-color:rgba(255,51,85,.3); }
 .live-dot {
-  width: 8px; height: 8px; border-radius: 50%;
-  background: var(--dim); transition: all .3s; flex-shrink: 0;
+  width:9px; height:9px; border-radius:50%;
+  background: var(--dim); transition:all .3s;
 }
 .live-dot.on {
   background: var(--green);
-  box-shadow: 0 0 8px var(--green);
-  animation: livepulse 1.2s ease-in-out infinite;
+  box-shadow: 0 0 8px var(--green), 0 0 20px rgba(45,235,138,0.35);
+  animation: blink 1.4s ease-in-out infinite;
 }
-@keyframes livepulse { 0%,100%{opacity:1} 50%{opacity:.3} }
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:.4} }
 
-/* ── SPEED HERO ─────────────────────────── */
+/* ── SPEED HERO ── */
 .speed-hero {
-  background: var(--s1);
-  border: 1px solid var(--border);
-  border-radius: 18px;
-  padding: 20px 18px 16px;
-  margin-bottom: 10px;
-  position: relative;
-  overflow: hidden;
+  background: var(--surface); border:1px solid var(--border);
+  border-radius:20px; padding:22px 20px 16px;
+  margin-bottom:12px; position:relative; overflow:hidden;
 }
-/* Top accent bar */
 .speed-hero::before {
-  content:'';
-  position: absolute; top:0; left:0; right:0; height: 2px;
-  background: linear-gradient(90deg, transparent, var(--cyan) 30%, var(--gold) 70%, transparent);
-  opacity: .5;
+  content:''; position:absolute; top:0; left:0; right:0; height:1px;
+  background: linear-gradient(90deg, transparent 0%, var(--accent) 50%, transparent 100%);
+  opacity:.6;
 }
-.speed-main {
-  display: flex;
-  align-items: flex-end;
-  gap: 8px;
-  margin-bottom: 12px;
-}
+.speed-row { display:flex; align-items:flex-end; gap:6px; margin-bottom:6px; }
 .speed-num {
-  font-family: var(--font-mono);
-  font-size: 92px;
-  line-height: 1;
-  letter-spacing: -4px;
-  color: var(--gold);
-  text-shadow: 0 0 48px rgba(232,184,75,.3);
-  transition: color .25s, text-shadow .25s;
-  min-width: 200px;
+  font-family:'Orbitron', monospace; font-size:84px; font-weight:900;
+  line-height:1; color: var(--accent);
+  text-shadow: 0 0 40px rgba(240,192,64,0.35);
+  letter-spacing:-2px; transition: color .2s, text-shadow .2s;
+  min-width:0;
 }
-.speed-num.active { color: var(--cyan); text-shadow: 0 0 48px rgba(45,224,200,.35); }
-.speed-num.above  { color: var(--green); text-shadow: 0 0 48px rgba(48,232,120,.4); }
-.speed-unit-col { display: flex; flex-direction: column; gap: 4px; padding-bottom: 12px; }
-.speed-unit-btn {
-  font-family: var(--font-mono);
-  font-size: 11px;
-  letter-spacing: 1px;
-  padding: 4px 8px;
-  border-radius: 6px;
-  border: 1px solid var(--border2);
-  background: transparent;
-  color: var(--dim2);
-  cursor: pointer;
-  transition: all .15s;
+.speed-num.running { color: var(--cyan); text-shadow: 0 0 40px rgba(56,200,240,0.35); }
+.speed-num.above   { color: var(--green); text-shadow: 0 0 40px rgba(45,235,138,0.4); }
+.speed-unit-col { display:flex; flex-direction:column; gap:4px; padding-bottom:10px; }
+.unit-btn {
+  font-family:'DM Mono', monospace; font-size:11px; letter-spacing:1px;
+  padding:4px 8px; border-radius:6px; border:1px solid var(--border2);
+  background:transparent; color:var(--dim2); cursor:pointer; transition:all .15s;
 }
-.speed-unit-btn.sel { border-color: var(--gold); color: var(--gold); }
+.unit-btn.sel { border-color:var(--accent); color:var(--accent); }
 
-.speed-bars { margin-bottom: 10px; }
-.sbar-wrap {
-  width: 100%; height: 3px;
-  background: var(--border);
-  border-radius: 2px;
-  margin-bottom: 5px;
-  overflow: hidden;
-}
-.sbar {
-  height: 100%; border-radius: 2px;
+.speed-bar-wrap { width:100%; height:3px; background:var(--border); border-radius:2px; margin-bottom:10px; overflow:hidden; }
+.speed-bar {
+  height:100%; border-radius:2px;
   background: linear-gradient(90deg, var(--cyan), var(--green));
-  width: 0%;
-  transition: width .12s linear;
+  width:0%; transition:width .12s linear;
 }
-
 .speed-meta {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 6px;
+  display:flex; justify-content:space-between;
+  font-family:'DM Mono', monospace; font-size:11px;
+  color: var(--dim); letter-spacing:1.5px;
 }
-.smeta-item { text-align: center; }
-.smeta-lbl {
-  font-family: var(--font-mono);
-  font-size: 8px;
-  letter-spacing: 2px;
-  color: var(--dim);
-  margin-bottom: 2px;
-  display: block;
-}
-.smeta-val {
-  font-family: var(--font-mono);
-  font-size: 13px;
-  color: var(--text);
-}
+.speed-meta .val { color: var(--text); }
 
-/* ── RUN ACTIVE BANNER ──────────────────── */
+/* ── RUN BANNER ── */
 .run-banner {
-  display: none;
-  background: rgba(48,232,120,.07);
-  border: 1px solid rgba(48,232,120,.22);
-  border-radius: 12px;
-  padding: 9px 14px;
-  margin-bottom: 10px;
-  align-items: center;
-  gap: 10px;
-  font-family: var(--font-mono);
-  font-size: 12px;
-  letter-spacing: 1px;
-  color: var(--green);
+  display:none; align-items:center; gap:8px;
+  background: rgba(45,235,138,0.08); border:1px solid rgba(45,235,138,0.2);
+  border-radius:10px; padding:8px 14px; margin-bottom:12px;
+  font-family:'DM Mono', monospace; font-size:12px;
+  letter-spacing:1px; color: var(--green);
 }
-.run-banner.on { display: flex; }
-.rbpulse {
-  width: 7px; height: 7px; border-radius: 50%;
-  background: var(--green);
-  animation: livepulse .8s ease-in-out infinite;
-  flex-shrink: 0;
+.run-banner.active { display:flex; }
+.run-pulse {
+  width:7px; height:7px; border-radius:50%;
+  background: var(--green); animation: blink .8s ease-in-out infinite; flex-shrink:0;
 }
-.rbtimer { margin-left: auto; font-size: 20px; font-weight: 500; color: var(--gold); }
-.rbpeak  { color: var(--text); }
+.run-time { margin-left:auto; font-size:16px; font-weight:500; color: var(--accent); }
 
-/* ── THRESHOLD ──────────────────────────── */
-.thresh-row {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  background: var(--s1);
-  border: 1px solid var(--border);
-  border-radius: 14px;
-  padding: 12px 16px;
-  margin-bottom: 10px;
+/* ── THRESHOLD ── */
+.thresh-card {
+  background: var(--surface); border:1px solid var(--border);
+  border-radius:14px; padding:14px 16px; margin-bottom:12px;
+  display:flex; align-items:center; gap:12px;
 }
-.thresh-lbl {
-  font-family: var(--font-mono);
-  font-size: 9px;
-  letter-spacing: 3px;
-  color: var(--dim2);
-  text-transform: uppercase;
-  white-space: nowrap;
+.thresh-label {
+  font-family:'DM Mono', monospace; font-size:10px; letter-spacing:3px;
+  color: var(--dim); text-transform:uppercase; white-space:nowrap;
 }
-.thresh-ctrl { display: flex; align-items: center; gap: 6px; margin-left: auto; }
-.tnud { display: flex; flex-direction: column; gap: 3px; }
-.tnud-btn {
-  width: 24px; height: 20px;
-  background: var(--s2);
-  border: 1px solid var(--border2);
-  border-radius: 5px;
-  color: var(--text);
-  font-size: 11px;
-  cursor: pointer;
-  display: flex; align-items: center; justify-content: center;
-  transition: all .12s;
+.thresh-input-wrap { display:flex; align-items:center; gap:6px; flex:1; }
+.thresh-input {
+  background: var(--panel); border:1px solid var(--border2); border-radius:8px;
+  color: var(--accent); font-family:'Orbitron', monospace; font-size:22px; font-weight:700;
+  width:90px; text-align:center; padding:6px 4px; outline:none;
+  transition:border-color .2s; -moz-appearance:textfield;
 }
-.tnud-btn:hover { border-color: var(--gold); color: var(--gold); }
-input.tinput {
-  font-family: var(--font-mono);
-  font-size: 28px;
-  font-weight: 400;
-  color: var(--gold);
-  background: var(--s2);
-  border: 1px solid var(--border2);
-  border-radius: 8px;
-  width: 80px;
-  text-align: center;
-  padding: 4px 2px;
-  outline: none;
-  transition: border-color .2s;
-  -moz-appearance: textfield;
+.thresh-input::-webkit-outer-spin-button,
+.thresh-input::-webkit-inner-spin-button { -webkit-appearance:none; }
+.thresh-input:focus { border-color: var(--accent); box-shadow:0 0 0 2px rgba(240,192,64,.15); }
+.thresh-unit-lbl { font-family:'DM Mono', monospace; font-size:12px; color: var(--dim2); }
+.thresh-btns { display:flex; flex-direction:column; gap:4px; }
+.thresh-btn {
+  background: var(--panel); border:1px solid var(--border2); border-radius:6px;
+  color: var(--text); font-size:14px; width:28px; height:22px; cursor:pointer;
+  display:flex; align-items:center; justify-content:center; transition:all .15s;
 }
-input.tinput::-webkit-inner-spin-button,
-input.tinput::-webkit-outer-spin-button { -webkit-appearance: none; }
-input.tinput:focus { border-color: var(--gold); }
-.tinput-unit {
-  font-family: var(--font-mono);
-  font-size: 12px;
-  color: var(--dim2);
-}
+.thresh-btn:hover { background:var(--border2); color:var(--accent); }
 
-/* ── CONTROLS ───────────────────────────── */
-.ctrl-grid {
-  display: grid;
-  grid-template-columns: 1fr auto auto;
-  gap: 8px;
-  margin-bottom: 10px;
+/* ── CONTROLS ── */
+.ctrl-row {
+  display:grid; grid-template-columns:1fr auto auto;
+  gap:8px; margin-bottom:12px;
 }
 .btn {
-  font-family: var(--font-ui);
-  font-weight: 700;
-  font-size: 13px;
-  letter-spacing: 2.5px;
-  text-transform: uppercase;
-  border: none;
-  border-radius: 11px;
-  padding: 13px 14px;
-  cursor: pointer;
-  transition: all .18s;
+  font-family:'DM Sans', sans-serif; font-weight:600; font-size:12px;
+  letter-spacing:2px; text-transform:uppercase; border:none;
+  border-radius:10px; padding:13px 16px; cursor:pointer;
+  transition:all .2s; white-space:nowrap;
 }
-.btn-go   { background: var(--cyan); color: var(--bg); }
-.btn-go:hover { filter: brightness(1.12); transform: translateY(-1px); }
-.btn-go.stop { background: var(--red); color: #fff; }
-.btn-sec {
-  background: var(--s2);
-  border: 1px solid var(--border2);
-  color: var(--dim2);
-}
-.btn-sec:hover { border-color: var(--text); color: var(--text); }
+.btn-main { background: var(--accent); color: #07090d; }
+.btn-main:hover { filter:brightness(1.1); transform:translateY(-1px); }
+.btn-main.stop { background: var(--danger); color:#fff; }
+.btn-secondary { background: var(--panel); border:1px solid var(--border2); color: var(--dim2); }
+.btn-secondary:hover { border-color:var(--text); color:var(--text); }
 
-/* ── CHART ──────────────────────────────── */
-.chart-card {
-  background: var(--s1);
-  border: 1px solid var(--border);
-  border-radius: 16px;
-  padding: 14px 12px 10px;
-  margin-bottom: 10px;
-}
-.card-hdr {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  margin-bottom: 10px;
-  gap: 8px;
-}
-.card-title {
-  font-family: var(--font-mono);
-  font-size: 9px;
-  letter-spacing: 3px;
-  color: var(--dim2);
-  text-transform: uppercase;
-}
-.legend {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 7px;
-  margin-top: 5px;
-}
-.leg-item {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  font-family: var(--font-mono);
-  font-size: 9px;
-  color: var(--dim2);
-  cursor: pointer;
-  transition: opacity .2s;
-  letter-spacing: .5px;
-}
-.leg-item.faded { opacity: .3; }
-.leg-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
-
-canvas#chart {
-  width: 100%;
-  height: 230px;
-  display: block;
-}
-
-/* ── METRICS ────────────────────────────── */
+/* ── METRICS ── */
 .metrics-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 8px;
-  margin-bottom: 10px;
+  display:grid; grid-template-columns:repeat(3,1fr);
+  gap:8px; margin-bottom:12px;
 }
-.mcard {
-  background: var(--s1);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 11px 10px;
-  text-align: center;
+.metric-card {
+  background: var(--surface); border:1px solid var(--border);
+  border-radius:12px; padding:12px 10px; text-align:center;
 }
-.mcard-lbl {
-  font-family: var(--font-mono);
-  font-size: 8px;
-  letter-spacing: 2px;
-  color: var(--dim);
-  text-transform: uppercase;
-  display: block;
-  margin-bottom: 5px;
+.metric-lbl {
+  font-family:'DM Mono', monospace; font-size:8px; letter-spacing:2.5px;
+  color: var(--dim); text-transform:uppercase; display:block; margin-bottom:5px;
 }
-.mcard-val {
-  font-family: var(--font-mono);
-  font-size: 20px;
-  color: var(--cyan);
-  line-height: 1;
+.metric-val {
+  font-family:'Orbitron', monospace; font-size:18px; font-weight:700;
+  color: var(--cyan); line-height:1;
 }
-.mcard-val small { font-size: 9px; color: var(--dim2); }
+.metric-val small { font-size:9px; color:var(--dim2); font-family:'DM Mono',monospace; font-weight:400; }
 
-/* ── RUNS LIST ──────────────────────────── */
+/* ── CHART ── */
+.chart-card {
+  background: var(--surface); border:1px solid var(--border);
+  border-radius:16px; padding:16px 14px 12px; margin-bottom:12px;
+}
+.chart-header {
+  display:flex; align-items:flex-start; justify-content:space-between;
+  margin-bottom:14px; gap:8px;
+}
+.chart-title {
+  font-family:'DM Mono', monospace; font-size:10px; letter-spacing:3px;
+  color: var(--dim); text-transform:uppercase;
+}
+.chart-legend { display:flex; flex-wrap:wrap; gap:8px; margin-top:6px; }
+.legend-item {
+  display:flex; align-items:center; gap:5px;
+  font-family:'DM Mono', monospace; font-size:9px; color: var(--dim2);
+  cursor:pointer; transition:opacity .2s; letter-spacing:.5px;
+}
+.legend-item.faded { opacity:.3; }
+.legend-dot { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
+
+canvas#chart { width:100%; height:220px; display:block; }
+
+/* ── RUNS LIST ── */
 .runs-card {
-  background: var(--s1);
-  border: 1px solid var(--border);
-  border-radius: 16px;
-  padding: 14px 12px;
+  background: var(--surface); border:1px solid var(--border);
+  border-radius:16px; padding:14px;
 }
-.run-list { display: flex; flex-direction: column; gap: 7px; margin-top: 10px; }
-.ritem {
-  background: var(--s2);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 9px 12px;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  cursor: pointer;
-  transition: border-color .15s;
+.runs-header {
+  display:flex; align-items:center; justify-content:space-between; margin-bottom:12px;
 }
-.ritem:hover { border-color: var(--border2); }
-.ritem.faded { opacity: .4; }
-.rcolor { width: 9px; height: 32px; border-radius: 3px; flex-shrink: 0; }
-.rinfo { flex: 1; min-width: 0; }
-.rname {
-  font-family: var(--font-mono);
-  font-size: 11px;
-  color: var(--text);
-  letter-spacing: 1px;
-  margin-bottom: 3px;
+.section-title {
+  font-family:'DM Mono', monospace; font-size:10px; letter-spacing:3px;
+  color: var(--dim); text-transform:uppercase;
 }
-.rsub {
-  font-family: var(--font-mono);
-  font-size: 9px;
-  color: var(--dim2);
-  letter-spacing: .5px;
+.run-list { display:flex; flex-direction:column; gap:7px; }
+.run-item {
+  background: var(--panel); border:1px solid var(--border); border-radius:10px;
+  padding:10px 12px; display:flex; align-items:center; gap:10px;
+  cursor:pointer; transition:border-color .15s;
 }
-.rpeak {
-  font-family: var(--font-mono);
-  font-size: 18px;
-  color: var(--gold);
-  text-align: right;
+.run-item:hover { border-color:var(--border2); }
+.run-item.faded { opacity:.35; }
+.run-color { width:10px; height:28px; border-radius:3px; flex-shrink:0; }
+.run-info { flex:1; min-width:0; }
+.run-name {
+  font-family:'DM Mono', monospace; font-size:11px; letter-spacing:1px;
+  color: var(--text); margin-bottom:3px;
 }
-.rpeak small { font-size: 9px; color: var(--dim2); }
-.rdel {
-  background: transparent; border: none;
-  color: var(--dim); font-size: 13px;
-  cursor: pointer; padding: 4px;
-  transition: color .15s; line-height: 1;
+.run-sub { font-family:'DM Mono', monospace; font-size:10px; color: var(--dim); }
+.run-peak { font-family:'Orbitron', monospace; font-size:16px; font-weight:700; color: var(--accent); }
+.run-peak small { font-family:'DM Mono', monospace; font-size:9px; color: var(--dim2); font-weight:400; }
+.run-del {
+  background:transparent; border:none; color: var(--dim); font-size:14px;
+  cursor:pointer; padding:4px; line-height:1; transition:color .15s;
 }
-.rdel:hover { color: var(--red); }
-.empty-msg {
-  font-family: var(--font-mono);
-  font-size: 10px;
-  letter-spacing: 2px;
-  color: var(--dim);
-  text-align: center;
-  padding: 20px 0;
+.run-del:hover { color:var(--danger); }
+.no-runs {
+  text-align:center; font-family:'DM Mono', monospace; font-size:11px;
+  color: var(--dim); letter-spacing:2px; padding:18px 0;
 }
 
-/* ── PERMISSION OVERLAY ─────────────────── */
+/* ── PERMISSION OVERLAY ── */
 .overlay {
-  position: fixed; inset: 0;
-  background: rgba(5,7,9,.97);
-  z-index: 100;
-  display: flex; flex-direction: column;
-  align-items: center; justify-content: center;
-  padding: 32px; text-align: center;
-  gap: 0;
+  position:fixed; inset:0; background: rgba(7,9,13,0.97);
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  z-index:100; padding:32px; text-align:center;
 }
-.overlay.hidden { display: none; }
-.ov-icon { font-size: 52px; margin-bottom: 18px; }
-.ov-title {
-  font-family: var(--font-ui);
-  font-size: 20px;
-  font-weight: 700;
-  letter-spacing: 4px;
-  color: var(--gold);
-  margin-bottom: 12px;
+.overlay.hidden { display:none; }
+.overlay-icon { font-size:48px; margin-bottom:18px; }
+.overlay h2 {
+  font-family:'Orbitron', monospace; font-size:18px; font-weight:900;
+  letter-spacing:3px; color: var(--accent); margin-bottom:12px;
 }
-.ov-desc {
-  font-family: var(--font-ui);
-  font-size: 14px;
-  color: var(--dim2);
-  max-width: 300px;
-  line-height: 1.7;
-  margin-bottom: 28px;
+.overlay p {
+  font-size:13px; color: var(--dim2); max-width:300px;
+  line-height:1.7; margin-bottom:28px;
 }
-.ov-btn {
-  font-family: var(--font-ui);
-  font-weight: 700;
-  font-size: 13px;
-  letter-spacing: 3px;
-  text-transform: uppercase;
-  background: var(--gold);
-  color: var(--bg);
-  border: none;
-  border-radius: 12px;
-  padding: 15px 36px;
-  cursor: pointer;
-  margin-bottom: 14px;
-  display: block;
-  width: 100%;
-  max-width: 280px;
+.overlay button {
+  background: var(--accent); color: #07090d;
+  font-family:'Orbitron', monospace; font-size:12px; font-weight:700;
+  letter-spacing:3px; border:none; border-radius:12px;
+  padding:15px 36px; cursor:pointer; display:block;
+  width:100%; max-width:260px; margin-bottom:10px;
 }
-.ov-note {
-  font-family: var(--font-mono);
-  font-size: 10px;
-  color: var(--dim);
-  letter-spacing: 1px;
+.overlay-note {
+  font-family:'DM Mono', monospace; font-size:10px;
+  color: var(--dim); letter-spacing:1px;
 }
 </style>
 </head>
 <body>
-<div class="grid-bg"></div>
 
 <div class="overlay" id="overlay">
-  <div class="ov-icon">📡</div>
-  <div class="ov-title">PERMESSI RICHIESTI</div>
-  <p class="ov-desc">SpeedCurve Pro usa GPS ad alta frequenza + accelerometro per la massima precisione. Su iOS è necessaria l'autorizzazione esplicita.</p>
-  <button class="ov-btn" onclick="requestAll()">AUTORIZZA SENSORI</button>
-  <div class="ov-note">GPS · ACCELEROMETRO · GIROSCOPIO</div>
+  <div class="overlay-icon">📡</div>
+  <h2>PERMESSI</h2>
+  <p>SpeedCurve usa GPS ad alta precisione e accelerometro per misurare la velocità in modo accurato. Su iOS è richiesta autorizzazione esplicita.</p>
+  <button onclick="requestAll()">AUTORIZZA SENSORI</button>
+  <div class="overlay-note">GPS · IMU · COMPLEMENTARY FILTER</div>
 </div>
 
-<div class="wrap">
+<div class="app">
 
-  <!-- Header -->
   <header class="hdr">
-    <div class="logo">SPEED<em>CURVE</em> <span style="font-size:11px;letter-spacing:2px;color:var(--dim2);font-weight:400">v0.11; <a href="v0.12.html">v0.12</a></span></div>
-    <div class="hdr-chips">
-      <span class="chip" id="chipGps">GPS --</span>
-      <span class="chip" id="chipImu">IMU --</span>
+    <div class="logo">SPEED<span>CURVE v0.13 - <a href="v0.12.html">v0.12</a></span></div>
+    <div class="hdr-right">
+      <span class="hz-pill" id="hzPill">-- Hz</span>
+      <span class="gps-pill" id="gpsPill">GPS --</span>
       <div class="live-dot" id="liveDot"></div>
     </div>
   </header>
 
   <!-- Speed -->
   <div class="speed-hero">
-    <div class="speed-main">
+    <div class="speed-row">
       <div class="speed-num" id="speedNum">0.0</div>
       <div class="speed-unit-col">
-        <button class="speed-unit-btn sel" id="btnKmh" onclick="setUnit('kmh')">km/h</button>
-        <button class="speed-unit-btn" id="btnMs" onclick="setUnit('ms')">m/s</button>
+        <button class="unit-btn sel" id="btnKmh" onclick="setUnit('kmh')">km/h</button>
+        <button class="unit-btn" id="btnMs" onclick="setUnit('ms')">m/s</button>
       </div>
     </div>
-    <div class="speed-bars">
-      <div class="sbar-wrap"><div class="sbar" id="speedBar"></div></div>
-    </div>
+    <div class="speed-bar-wrap"><div class="speed-bar" id="speedBar"></div></div>
     <div class="speed-meta">
-      <div class="smeta-item">
-        <span class="smeta-lbl">MAX</span>
-        <span class="smeta-val" id="smMax">0.0</span>
-      </div>
-      <div class="smeta-item">
-        <span class="smeta-lbl">GPS Hz</span>
-        <span class="smeta-val" id="smGpsHz">--</span>
-      </div>
-      <div class="smeta-item">
-        <span class="smeta-lbl">IMU Hz</span>
-        <span class="smeta-val" id="smImuHz">--</span>
-      </div>
-      <div class="smeta-item">
-        <span class="smeta-lbl">PREC ±</span>
-        <span class="smeta-val" id="smAcc">--</span>
-      </div>
+      <span>MAX <span class="val" id="smMax">0.0</span></span>
+      <span>GPS <span class="val" id="smGps">--</span></span>
+      <span>PREC <span class="val" id="smAcc">--</span></span>
+      <span>IMU <span class="val" id="smImu">-- Hz</span></span>
     </div>
   </div>
 
-  <!-- Active run banner -->
+  <!-- Run banner -->
   <div class="run-banner" id="runBanner">
-    <div class="rbpulse"></div>
-    <span id="rbLabel">RUN #1</span>
-    <span class="rbpeak">PEAK <span id="rbPeak">0.0</span></span>
-    <div class="rbtimer" id="rbTimer">0.00s</div>
+    <div class="run-pulse"></div>
+    <span id="runBannerLabel">RUN #1 IN CORSO</span>
+    <span style="color:var(--text);font-size:11px">PEAK <span id="rbPeak">0.0</span></span>
+    <div class="run-time" id="runTimerDisplay">0.00s</div>
   </div>
 
   <!-- Threshold -->
-  <div class="thresh-row">
-    <span class="thresh-lbl">VELOCITÀ SOGLIA</span>
-    <div class="thresh-ctrl">
-      <div class="tnud">
-        <button class="tnud-btn" onclick="adjT(+5)">▲</button>
-        <button class="tnud-btn" onclick="adjT(-5)">▼</button>
+  <div class="thresh-card">
+    <div class="thresh-label">SOGLIA</div>
+    <div class="thresh-input-wrap">
+      <div class="thresh-btns">
+        <button class="thresh-btn" onclick="adjThresh(+5)">▲</button>
+        <button class="thresh-btn" onclick="adjThresh(-5)">▼</button>
       </div>
-      <input class="tinput" type="number" id="tinput" value="40" min="1" max="400">
-      <span class="tinput-unit" id="tunit">km/h</span>
+      <input class="thresh-input" type="number" id="threshInput" value="40" min="1" max="400">
+      <span class="thresh-unit-lbl" id="threshUnitLbl">km/h</span>
     </div>
   </div>
 
   <!-- Controls -->
-  <div class="ctrl-grid">
-    <button class="btn btn-go" id="btnGo" onclick="toggleSensor()">▶ AVVIA</button>
-    <button class="btn btn-sec" onclick="resetSession()" title="Reset velocità e sessione">RESET</button>
-    <button class="btn btn-sec" onclick="clearRuns()" title="Elimina tutte le run">CLR</button>
+  <div class="ctrl-row">
+    <button class="btn btn-main" id="btnMain" onclick="toggleSensor()">▶ AVVIA</button>
+    <button class="btn btn-secondary" onclick="resetSession()">RESET</button>
+    <button class="btn btn-secondary" onclick="clearRuns()">CLR RUNS</button>
   </div>
 
-  <!-- Live metrics -->
+  <!-- Metrics -->
   <div class="metrics-grid">
-    <div class="mcard">
-      <span class="mcard-lbl">GPS m/s</span>
-      <div class="mcard-val" id="mGps">-- <small>m/s</small></div>
+    <div class="metric-card">
+      <span class="metric-lbl">GPS RAW</span>
+      <div class="metric-val" id="mGpsRaw">-- <small>m/s</small></div>
     </div>
-    <div class="mcard">
-      <span class="mcard-lbl">FUSO m/s</span>
-      <div class="mcard-val" id="mFused">-- <small>m/s</small></div>
+    <div class="metric-card">
+      <span class="metric-lbl">FUSO</span>
+      <div class="metric-val" id="mFused">-- <small>m/s</small></div>
     </div>
-    <div class="mcard">
-      <span class="mcard-lbl">RUNS</span>
-      <div class="mcard-val" id="mRuns">0</div>
+    <div class="metric-card">
+      <span class="metric-lbl">RUNS</span>
+      <div class="metric-val" id="mRuns">0</div>
     </div>
   </div>
 
   <!-- Chart -->
   <div class="chart-card">
-    <div class="card-hdr">
+    <div class="chart-header">
       <div>
-        <div class="card-title">CURVA VELOCITÀ vs TEMPO (da soglia)</div>
-        <div class="legend" id="legend"></div>
+        <div class="chart-title">VELOCITÀ vs TEMPO (da soglia)</div>
+        <div class="chart-legend" id="chartLegend"></div>
       </div>
     </div>
     <canvas id="chart"></canvas>
@@ -602,84 +408,133 @@ canvas#chart {
 
   <!-- Runs list -->
   <div class="runs-card">
-    <div class="card-hdr" style="margin-bottom:0">
-      <span class="card-title">RUN SALVATE</span>
-      <button class="btn-sec btn" style="padding:5px 12px;font-size:10px;letter-spacing:1px" onclick="clearRuns()">CLEAR ALL</button>
+    <div class="runs-header">
+      <div class="section-title">RUN SALVATE</div>
     </div>
     <div class="run-list" id="runList">
-      <div class="empty-msg">Avvia il sensore e supera la velocità soglia per registrare una run</div>
+      <div class="no-runs" id="noRuns">Avvia il sensore e supera la soglia per registrare una run</div>
     </div>
   </div>
 
-</div><!-- /wrap -->
+</div>
 
 <script>
 'use strict';
 
-// ═══════════════════════════════════════════════════
-// CONSTANTS
-// ═══════════════════════════════════════════════════
-const RUN_COLORS = ['#2de0c8','#e8b84b','#30e878','#ff4060','#c070ff','#ff7840','#4a9eff','#ffd97a','#f472b6','#a3e635'];
-const HP_ALPHA   = 0.90;   // high-pass for gravity removal
-const FUSE_ALPHA = 0.82;   // complementary filter: weight to GPS vs IMU prediction
-const MAX_IMU_GAP = 0.8;   // s: max time to trust IMU without GPS update
+// ═══════════════════════════════════════════════════════════════════
+// CONFIG
+// ═══════════════════════════════════════════════════════════════════
+const RUN_COLORS = ['#38c8f0','#f0c040','#2deb8a','#ff5f40','#a855f7','#fb923c','#ec4899','#ffd97a','#84cc16','#f43f5e'];
 
-// ═══════════════════════════════════════════════════
+// Kalman filter noise parameters
+// Q: process noise (how much we trust the IMU prediction per second²)
+// R: measurement noise (how much we trust the GPS reading, in (m/s)²)
+// Lower R = trust GPS more. Lower Q = smoother but slower to react to IMU.
+const KF_Q = 0.5;    // IMU process noise (m/s)² per second — tuned for phone accel quality
+const KF_R = 0.3;    // GPS measurement noise (m/s)² — typical GPS Doppler quality
+
+// High-pass filter for gravity removal
+const HP_ALPHA = 0.92;
+
+// Bias estimation: average accel over N still samples before a run
+const BIAS_WIN = 80;      // samples for bias estimation
+const STILL_THRESH = 0.15; // m/s² total accel to consider "still"
+
+// Max seconds to keep propagating IMU without any GPS fix
+const MAX_NO_GPS = 2.0;
+
+// ═══════════════════════════════════════════════════════════════════
 // STATE
-// ═══════════════════════════════════════════════════
-let unit = 'kmh';
-let threshold = 40; // km/h — always km/h internally
+// ═══════════════════════════════════════════════════════════════════
+let unit      = 'kmh';
+let threshold = 40;   // km/h internally always
+let sensorOn  = false;
 
-// Sensors
-let geoWatchId   = null;
-let imuActive    = false;
-let sensorOn     = false;
+// ── Kalman state ──
+let kf_x  = 0;    // estimated speed (m/s)
+let kf_P  = 1;    // estimate error covariance
+let kf_initialized = false;
 
-// GPS state
-let gpsSpeed_ms  = null;   // last GPS speed in m/s
-let gpsTs        = null;   // performance.now() of last GPS fix
-let gpsHz_buf    = [];
-let gpsAccuracy  = null;
+// ── GPS ──
+let geoWatchId  = null;
+let gpsSpeed_ms = null;
+let gpsTs       = null;
+let gpsHz_buf   = [];
+let lastGpsWall = null;  // performance.now() of last valid GPS fix
 
-// IMU state
-let imuHz_buf    = [];
-let imuLastT     = null;
-let hpX=0, hpY=0, hpZ=0;
-let rawPrevX=0, rawPrevY=0, rawPrevZ=0;
+// ── IMU ──
+let imuLastT  = null;
+let imuHz_buf = [];
 
-// Fused velocity (m/s, scalar — magnitude)
-let fusedSpeed   = 0;      // current fused speed magnitude
-let imuDelta     = 0;      // accumulated IMU delta since last GPS
-let imuSinceGps  = 0;      // seconds since last GPS update
+// High-pass filter state
+let hpX = 0, hpY = 0, hpZ = 0;
+let prevRawX = 0, prevRawY = 0, prevRawZ = 0;
+
+// Bias estimation (removed gravity offset that drifts into integral)
+let biasX = 0, biasY = 0, biasZ = 0;
+let biasSamples = [];
+let biasReady = false;
+
+// Seconds since last GPS measurement received
+let sinceGps = 999;
 
 // Session
-let sessionMax   = 0;
-let totalGpsFixes = 0;
+let sessionMax = 0;
 
-// Runs
-let runs         = [];
-let activeRun    = null;
-let runIdCtr     = 0;
-let hiddenRuns   = new Set();
-let wasAbove     = false;
-let rafTimer     = null;
+// ── Runs ──
+let runs      = [];
+let activeRun = null;
+let runIdCtr  = 0;
+let hiddenRuns = new Set();
+let wasAbove  = false;
+let rafTimer  = null;
 
-// ═══════════════════════════════════════════════════
-// UNIT HELPERS
-// ═══════════════════════════════════════════════════
-function toDisplay(ms) { return unit === 'kmh' ? ms * 3.6 : ms; }
-function dispUnit()    { return unit === 'kmh' ? 'km/h' : 'm/s'; }
-function threshMs()    { return unit === 'kmh' ? threshold / 3.6 : threshold; }
+// ═══════════════════════════════════════════════════════════════════
+// HELPERS
+// ═══════════════════════════════════════════════════════════════════
+function toDisp(ms) { return unit === 'kmh' ? ms * 3.6 : ms; }
+function dispUnit() { return unit === 'kmh' ? 'km/h' : 'm/s'; }
+function threshMs() { return threshold / 3.6; }
 
-// ═══════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════════
+// KALMAN FILTER
+// ═══════════════════════════════════════════════════════════════════
+// Predict step: propagate state using IMU acceleration over dt seconds
+// accel_ms2 = signed linear acceleration along motion axis (m/s²)
+function kf_predict(accel_ms2, dt) {
+  // State transition: x_new = x + a*dt
+  kf_x = kf_x + accel_ms2 * dt;
+  if (kf_x < 0) kf_x = 0;  // speed can't be negative
+
+  // Covariance prediction: P_new = P + Q*dt
+  // (uncertainty grows over time proportionally to dt)
+  kf_P = kf_P + KF_Q * dt;
+}
+
+// Update step: correct with GPS measurement
+function kf_update(gps_ms) {
+  // Kalman gain: K = P / (P + R)
+  // High P (uncertain) → K near 1 → trust GPS fully
+  // Low P (confident)  → K near 0 → barely move toward GPS
+  const K = kf_P / (kf_P + KF_R);
+
+  // State update
+  kf_x = kf_x + K * (gps_ms - kf_x);
+  if (kf_x < 0) kf_x = 0;
+
+  // Covariance update: P = (1 - K) * P
+  kf_P = (1 - K) * kf_P;
+}
+
+// ═══════════════════════════════════════════════════════════════════
 // GPS
-// ═══════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════════
 function startGPS() {
-  if (!navigator.geolocation) return;
+  if (!navigator.geolocation) { setGpsPill('NO GPS','err'); return; }
   geoWatchId = navigator.geolocation.watchPosition(onGPS, onGPSErr, {
     enableHighAccuracy: true,
     maximumAge: 0,
-    timeout: 10000
+    timeout: 15000
   });
 }
 function stopGPS() {
@@ -688,146 +543,177 @@ function stopGPS() {
 
 function onGPS(pos) {
   const now = performance.now();
-  const spd = pos.coords.speed; // m/s, can be null
+  const spd = pos.coords.speed; // m/s via Doppler, null if unavailable
 
-  // Frequency
+  // GPS Hz measurement
   if (gpsTs !== null) {
     const dt = (now - gpsTs) / 1000;
     if (dt > 0) {
-      gpsHz_buf.push(1/dt);
+      gpsHz_buf.push(1 / dt);
       if (gpsHz_buf.length > 10) gpsHz_buf.shift();
-      const hz = gpsHz_buf.reduce((a,b)=>a+b,0)/gpsHz_buf.length;
-      document.getElementById('smGpsHz').textContent = hz.toFixed(1);
-      setChip('chipGps', 'GPS ' + hz.toFixed(0)+'Hz', 'ok');
+      const hz = gpsHz_buf.reduce((a,b)=>a+b,0) / gpsHz_buf.length;
+      setGpsPill('GPS ' + hz.toFixed(1) + 'Hz', 'ok');
+      document.getElementById('smGps').textContent = hz.toFixed(1) + 'Hz';
     }
   }
   gpsTs = now;
 
   if (spd !== null && spd >= 0) {
     gpsSpeed_ms = spd;
-    gpsAccuracy = pos.coords.accuracy;
-    totalGpsFixes++;
-    document.getElementById('mGps').innerHTML = spd.toFixed(2) + ' <small>m/s</small>';
-    document.getElementById('smAcc').textContent = pos.coords.accuracy.toFixed(0)+'m';
+    lastGpsWall = now;
+    sinceGps = 0;
 
-    // Fuse: GPS resets our estimate, weighted by IMU accumulated delta
-    // Complementary: fused = alpha*GPS + (1-alpha)*(GPS_prev + imu_delta)
-    const predicted = (fusedSpeed >= 0 ? fusedSpeed : 0) + imuDelta;
-    fusedSpeed = FUSE_ALPHA * spd + (1 - FUSE_ALPHA) * Math.max(0, predicted);
+    document.getElementById('smAcc').textContent = pos.coords.accuracy.toFixed(0) + 'm';
+    document.getElementById('mGpsRaw').innerHTML = spd.toFixed(2) + ' <small>m/s</small>';
 
-    // Reset IMU accumulator
-    imuDelta = 0;
-    imuSinceGps = 0;
+    // Kalman update: GPS measurement corrects our estimate
+    if (!kf_initialized) {
+      kf_x = spd;
+      kf_P = KF_R;  // start with GPS-level confidence
+      kf_initialized = true;
+    } else {
+      kf_update(spd);
+    }
 
-    onNewSpeed(fusedSpeed, now);
+    document.getElementById('mFused').innerHTML = kf_x.toFixed(2) + ' <small>m/s</small>';
+    onNewSpeed(kf_x, now);
   }
 }
-function onGPSErr(e) {
-  setChip('chipGps', 'GPS ERR', 'err');
-  console.warn('GPS error', e);
+function onGPSErr(e) { setGpsPill('GPS ERR','err'); }
+function setGpsPill(txt, cls) {
+  const el = document.getElementById('gpsPill');
+  el.textContent = txt; el.className = 'gps-pill ' + cls;
 }
 
-// ═══════════════════════════════════════════════════
-// IMU (DeviceMotion)
-// ═══════════════════════════════════════════════════
-function startIMU() {
-  window.addEventListener('devicemotion', onIMU);
-  imuActive = true;
-}
-function stopIMU() {
+// ═══════════════════════════════════════════════════════════════════
+// IMU  — runs at full device frequency (~60–100 Hz)
+// Used to: (a) estimate accelerometer bias while still,
+//           (b) run Kalman predict step between GPS fixes
+// ═══════════════════════════════════════════════════════════════════
+function startIMU() { window.addEventListener('devicemotion', onIMU); }
+function stopIMU()  {
   window.removeEventListener('devicemotion', onIMU);
-  imuActive = false;
-  hpX=hpY=hpZ=0; rawPrevX=rawPrevY=rawPrevZ=0;
-  imuLastT = null;
+  hpX=hpY=hpZ=0; prevRawX=prevRawY=prevRawZ=0;
+  imuLastT=null; biasReady=false; biasSamples=[];
 }
 
 function onIMU(e) {
-  const acc = e.accelerationIncludingGravity || e.acceleration;
-  if (!acc) return;
-  const ax = acc.x||0, ay = acc.y||0, az = acc.z||0;
+  // Prefer linearAcceleration (gravity already removed by OS) if available and non-zero
+  const linAcc = e.acceleration;
+  const rawAcc = e.accelerationIncludingGravity;
+  if (!rawAcc && !linAcc) return;
+
   const now = performance.now();
 
+  // ── Compute linear acceleration ──
+  let lx, ly, lz;
+  if (linAcc && (linAcc.x !== null) && (Math.abs(linAcc.x) + Math.abs(linAcc.y) + Math.abs(linAcc.z) > 0.001)) {
+    // OS already removed gravity — best case
+    lx = linAcc.x || 0;
+    ly = linAcc.y || 0;
+    lz = linAcc.z || 0;
+  } else {
+    // Fallback: high-pass filter on raw to remove gravity
+    const ax = rawAcc.x || 0, ay = rawAcc.y || 0, az = rawAcc.z || 0;
+    hpX = HP_ALPHA * (hpX + ax - prevRawX);
+    hpY = HP_ALPHA * (hpY + ay - prevRawY);
+    hpZ = HP_ALPHA * (hpZ + az - prevRawZ);
+    prevRawX = ax; prevRawY = ay; prevRawZ = az;
+    lx = hpX; ly = hpY; lz = hpZ;
+  }
+
+  // ── Bias estimation (when nearly still, before first GPS fix) ──
+  const totalAccel = Math.sqrt(lx*lx + ly*ly + lz*lz);
+  if (!biasReady && gpsSpeed_ms === null) {
+    if (totalAccel < STILL_THRESH) {
+      biasSamples.push([lx, ly, lz]);
+      if (biasSamples.length >= BIAS_WIN) {
+        biasX = biasSamples.reduce((s,p)=>s+p[0],0) / BIAS_WIN;
+        biasY = biasSamples.reduce((s,p)=>s+p[1],0) / BIAS_WIN;
+        biasZ = biasSamples.reduce((s,p)=>s+p[2],0) / BIAS_WIN;
+        biasReady = true;
+        biasSamples = [];
+      }
+    } else {
+      biasSamples = []; // reset if phone moves during calibration
+    }
+  }
+
+  // Remove bias
+  if (biasReady) { lx -= biasX; ly -= biasY; lz -= biasZ; }
+
+  // ── IMU Hz display ──
   if (imuLastT !== null) {
     const dt = (now - imuLastT) / 1000;
-
-    // IMU Hz
-    if (dt > 0) {
-      imuHz_buf.push(1/dt);
-      if (imuHz_buf.length > 40) imuHz_buf.shift();
-      const hz = imuHz_buf.reduce((a,b)=>a+b,0)/imuHz_buf.length;
-      document.getElementById('smImuHz').textContent = hz.toFixed(1);
-      setChip('chipImu', 'IMU ' + hz.toFixed(0)+'Hz', 'ok');
-    }
-
     if (dt > 0 && dt < 0.5) {
-      // High-pass filter (gravity removal)
-      hpX = HP_ALPHA * (hpX + ax - rawPrevX);
-      hpY = HP_ALPHA * (hpY + ay - rawPrevY);
-      hpZ = HP_ALPHA * (hpZ + az - rawPrevZ);
+      imuHz_buf.push(1 / dt);
+      if (imuHz_buf.length > 40) imuHz_buf.shift();
+      const hz = imuHz_buf.reduce((a,b)=>a+b,0) / imuHz_buf.length;
+      document.getElementById('hzPill').textContent = hz.toFixed(0) + ' Hz';
+      document.getElementById('smImu').textContent = hz.toFixed(0) + ' Hz';
 
-      const linAccel = Math.sqrt(hpX*hpX + hpY*hpY + hpZ*hpZ);
+      sinceGps += dt;
 
-      // Accumulate IMU delta (signed: project acceleration on current velocity direction)
-      // Since we only have scalar speed, we use magnitude and sign heuristic:
-      // If above threshold assume accelerating/cruising, below = decelerating
-      imuDelta += hpX * dt; // use X component as primary (user holds phone upright)
-      imuSinceGps += dt;
+      // ── Kalman predict (only if GPS has initialized us and not stale) ──
+      if (kf_initialized && sinceGps < MAX_NO_GPS) {
+        // Project 3D linear acceleration onto the current velocity direction.
+        // Since we only track scalar speed we use the magnitude with sign from
+        // the dominant axis — the axis most aligned with motion contributes most.
+        // Simple heuristic: dot product with the normalized velocity vector.
+        // Without knowing the phone orientation we use the magnitude, then
+        // gate it: if the phone is decelerating (total_accel dot previous_velocity < 0)
+        // we apply a negative sign.
+        // Better: use the component of acceleration along X (forward when upright).
+        // User should hold phone vertically in portrait — Y axis = forward travel.
+        // We use the axis with largest recent magnitude as motion axis.
+        const aForward = ly; // primary; if wrong orientation user can flip
+        kf_predict(aForward - biasY, dt);
 
-      // If GPS is stale, use IMU prediction alone (with heavy damping to prevent drift)
-      if (imuSinceGps < MAX_IMU_GAP && gpsSpeed_ms !== null) {
-        const predicted = Math.max(0, gpsSpeed_ms + imuDelta);
-        // Blend: more we trust GPS the less we extrapolate
-        const staleW = Math.min(imuSinceGps / MAX_IMU_GAP, 1);
-        fusedSpeed = (1 - staleW * 0.3) * gpsSpeed_ms + (staleW * 0.3) * predicted;
-        fusedSpeed = Math.max(0, fusedSpeed);
+        // Clamp: speed can't grow unboundedly without GPS corrections
+        // If P (uncertainty) gets large, we stop relying on IMU and freeze
+        if (kf_P > 8) kf_x = kf_x; // let GPS correction pull it back
 
-        document.getElementById('mFused').innerHTML = fusedSpeed.toFixed(2) + ' <small>m/s</small>';
-        onNewSpeed(fusedSpeed, now);
+        document.getElementById('mFused').innerHTML = kf_x.toFixed(2) + ' <small>m/s</small>';
+        onNewSpeed(kf_x, now);
       }
     }
   }
 
-  rawPrevX=ax; rawPrevY=ay; rawPrevZ=az;
   imuLastT = now;
 }
 
-// ═══════════════════════════════════════════════════
-// FUSED SPEED → LOGIC
-// ═══════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════════
+// FUSED SPEED HANDLER
+// ═══════════════════════════════════════════════════════════════════
 function onNewSpeed(speed_ms, now) {
-  if (speed_ms > sessionMax) sessionMax = speed_ms;
-  updateSpeedUI(speed_ms);
-  if (sensorOn) handleRunLogic(speed_ms, now);
+  const s = Math.max(0, speed_ms);
+  if (s > sessionMax) sessionMax = s;
+  updateSpeedUI(s);
+  if (sensorOn) handleRunLogic(s, now);
 }
 
-// ═══════════════════════════════════════════════════
+// ═══════════════════════════════
 // RUN LOGIC
-// ═══════════════════════════════════════════════════
+// ═══════════════════════════════
 function handleRunLogic(speed_ms, now) {
-  const thr_ms = threshold / 3.6; // threshold always in km/h
-  const above  = speed_ms >= thr_ms;
+  const above = speed_ms >= threshMs();
 
   if (!wasAbove && above) {
-    startRun(now);
-    wasAbove = true;
+    startRun(now); wasAbove = true;
   }
-
   if (wasAbove && above && activeRun) {
     const t_ms = now - activeRun.startTs;
     activeRun.points.push({ t_ms, v_ms: speed_ms });
     if (speed_ms > activeRun.peak_ms) {
       activeRun.peak_ms = speed_ms;
-      document.getElementById('rbPeak').textContent = toDisplay(speed_ms).toFixed(1);
+      document.getElementById('rbPeak').textContent = toDisp(speed_ms).toFixed(1);
     }
     drawChart();
   }
-
   if (wasAbove && !above) {
     if (activeRun && activeRun.points.length >= 4) closeRun();
     else { activeRun = null; }
-    wasAbove = false;
-    hideBanner();
-    stopTimer();
+    wasAbove = false; hideBanner(); stopTimer();
   }
 }
 
@@ -836,133 +722,104 @@ function startRun(ts) {
   activeRun = {
     id: runIdCtr,
     color: RUN_COLORS[(runIdCtr-1) % RUN_COLORS.length],
-    startTs: ts,
-    points: [],
-    peak_ms: 0,
-    duration_ms: 0,
-    thresholdKmh: threshold
+    startTs: ts, points: [], peak_ms: 0,
+    duration_ms: 0, threshKmh: threshold
   };
-  showBanner(runIdCtr);
-  startTimer();
+  showBanner(runIdCtr); startTimer();
 }
 
 function closeRun() {
   activeRun.duration_ms = activeRun.points[activeRun.points.length-1].t_ms;
-  runs.push({ ...activeRun, points: [...activeRun.points] });
+  runs.push({ ...activeRun, points:[...activeRun.points] });
   activeRun = null;
   stopTimer(); hideBanner();
   renderRunList(); renderLegend(); drawChart();
   document.getElementById('mRuns').textContent = runs.length;
 }
 
-// ═══════════════════════════════════════════════════
+// ═══════════════════════════════
 // TIMER
-// ═══════════════════════════════════════════════════
+// ═══════════════════════════════
 function startTimer() {
   stopTimer();
   const tick = () => {
     if (!activeRun) return;
-    const s = (performance.now() - activeRun.startTs) / 1000;
-    document.getElementById('rbTimer').textContent = s.toFixed(2) + 's';
+    document.getElementById('runTimerDisplay').textContent =
+      ((performance.now()-activeRun.startTs)/1000).toFixed(2)+'s';
     rafTimer = requestAnimationFrame(tick);
   };
   rafTimer = requestAnimationFrame(tick);
 }
 function stopTimer() {
-  if (rafTimer) { cancelAnimationFrame(rafTimer); rafTimer = null; }
+  if (rafTimer) { cancelAnimationFrame(rafTimer); rafTimer=null; }
 }
 function showBanner(id) {
-  document.getElementById('runBanner').classList.add('on');
-  document.getElementById('rbLabel').textContent = 'RUN #' + id;
+  document.getElementById('runBanner').classList.add('active');
+  document.getElementById('runBannerLabel').textContent = 'RUN #'+id+' IN CORSO';
   document.getElementById('rbPeak').textContent = '0.0';
 }
 function hideBanner() {
-  document.getElementById('runBanner').classList.remove('on');
+  document.getElementById('runBanner').classList.remove('active');
+  document.getElementById('runTimerDisplay').textContent = '0.00s';
 }
 
-// ═══════════════════════════════════════════════════
-// UI
-// ═══════════════════════════════════════════════════
+// ═══════════════════════════════
+// SPEED UI
+// ═══════════════════════════════
 function updateSpeedUI(speed_ms) {
-  const disp = toDisplay(speed_ms);
-  const thr_display = toDisplay(threshold / 3.6);
-  const maxDisp = Math.max(thr_display * 2.5, 30);
+  const disp = toDisp(speed_ms);
+  const thr_disp = unit==='kmh' ? threshold : threshold/3.6;
+  const maxDisp = Math.max(thr_disp*2.5, 30);
 
   const el = document.getElementById('speedNum');
   el.textContent = disp.toFixed(1);
-  el.className = 'speed-num' + (sensorOn ? (speed_ms >= threshold/3.6 ? ' above' : ' active') : '');
+  el.className = 'speed-num' + (sensorOn ? (speed_ms>=threshMs()?' above':' running') : '');
 
-  document.getElementById('smMax').textContent = toDisplay(sessionMax).toFixed(1);
-  document.getElementById('speedBar').style.width = Math.min(100, (disp/maxDisp)*100) + '%';
+  document.getElementById('smMax').textContent = toDisp(sessionMax).toFixed(1);
+  document.getElementById('speedBar').style.width = Math.min(100,(disp/maxDisp)*100)+'%';
 }
 
-function setChip(id, label, cls) {
-  const el = document.getElementById(id);
-  el.textContent = label;
-  el.className = 'chip ' + cls;
-}
-
-function setUnit(u) {
-  unit = u;
-  document.getElementById('btnKmh').classList.toggle('sel', u==='kmh');
-  document.getElementById('btnMs').classList.toggle('sel', u==='ms');
-  document.getElementById('tunit').textContent = u==='kmh' ? 'km/h' : 'm/s';
-  drawChart();
-}
-
-function adjT(d) {
-  const el = document.getElementById('tinput');
-  let v = parseFloat(el.value)||40;
-  v = Math.max(1, Math.min(400, v+d));
-  el.value = v;
-  threshold = v;
-  drawChart();
-}
-document.getElementById('tinput').addEventListener('input', function(){
-  const v = parseFloat(this.value);
-  if (!isNaN(v) && v>=1 && v<=400) { threshold=v; drawChart(); }
-});
-
-// ═══════════════════════════════════════════════════
+// ═══════════════════════════════
 // SENSOR TOGGLE
-// ═══════════════════════════════════════════════════
+// ═══════════════════════════════
 function toggleSensor() {
   if (!sensorOn) {
     sensorOn = true;
-    startGPS();
-    startIMU();
-    document.getElementById('btnGo').textContent = '■ FERMA';
-    document.getElementById('btnGo').classList.add('stop');
+    startGPS(); startIMU();
+    document.getElementById('btnMain').textContent = '■ FERMA';
+    document.getElementById('btnMain').classList.add('stop');
     document.getElementById('liveDot').classList.add('on');
   } else {
     sensorOn = false;
     stopGPS(); stopIMU();
-    // Close any open run
-    if (activeRun && activeRun.points.length >= 4) closeRun();
-    else { activeRun = null; stopTimer(); hideBanner(); wasAbove=false; }
-    document.getElementById('btnGo').textContent = '▶ AVVIA';
-    document.getElementById('btnGo').classList.remove('stop');
+    if (activeRun && activeRun.points.length>=4) closeRun();
+    else { activeRun=null; stopTimer(); hideBanner(); wasAbove=false; }
+    document.getElementById('btnMain').textContent = '▶ AVVIA';
+    document.getElementById('btnMain').classList.remove('stop');
     document.getElementById('liveDot').classList.remove('on');
-    setChip('chipGps','GPS --','');
-    setChip('chipImu','IMU --','');
+    setGpsPill('GPS --','');
   }
 }
 
 function resetSession() {
   if (activeRun && activeRun.points.length>=4) closeRun();
   else { activeRun=null; stopTimer(); hideBanner(); }
-  wasAbove=false; fusedSpeed=0; gpsSpeed_ms=null; imuDelta=0;
-  hpX=hpY=hpZ=0; rawPrevX=rawPrevY=rawPrevZ=0;
-  imuSinceGps=0; sessionMax=0; totalGpsFixes=0;
-  gpsHz_buf=[]; imuHz_buf=[]; imuLastT=null; gpsTs=null;
+  wasAbove=false; gpsSpeed_ms=null; sinceGps=999;
+  kf_x=0; kf_P=1; kf_initialized=false;
+  hpX=hpY=hpZ=0; prevRawX=prevRawY=prevRawZ=0;
+  biasX=biasY=biasZ=0; biasReady=false; biasSamples=[];
+  sessionMax=0; gpsHz_buf=[]; imuHz_buf=[];
+  imuLastT=null; gpsTs=null; lastGpsWall=null;
+
   document.getElementById('speedNum').textContent='0.0';
   document.getElementById('speedNum').className='speed-num';
   document.getElementById('smMax').textContent='0.0';
-  document.getElementById('smGpsHz').textContent='--';
-  document.getElementById('smImuHz').textContent='--';
+  document.getElementById('smGps').textContent='--';
   document.getElementById('smAcc').textContent='--';
+  document.getElementById('smImu').textContent='-- Hz';
   document.getElementById('speedBar').style.width='0%';
-  document.getElementById('mGps').innerHTML='-- <small>m/s</small>';
+  document.getElementById('hzPill').textContent='-- Hz';
+  document.getElementById('mGpsRaw').innerHTML='-- <small>m/s</small>';
   document.getElementById('mFused').innerHTML='-- <small>m/s</small>';
   drawChart();
 }
@@ -973,206 +830,185 @@ function clearRuns() {
   document.getElementById('mRuns').textContent='0';
 }
 
-function deleteRun(id, e) {
-  e.stopPropagation();
-  runs = runs.filter(r=>r.id!==id);
-  hiddenRuns.delete(id);
-  renderRunList(); renderLegend(); drawChart();
+// ═══════════════════════════════
+// UNIT & THRESHOLD
+// ═══════════════════════════════
+function setUnit(u) {
+  unit = u;
+  document.getElementById('btnKmh').classList.toggle('sel', u==='kmh');
+  document.getElementById('btnMs').classList.toggle('sel', u==='ms');
+  document.getElementById('threshUnitLbl').textContent = u==='kmh'?'km/h':'m/s';
+  drawChart(); renderRunList();
 }
 
-function toggleRunVis(id) {
-  if (hiddenRuns.has(id)) hiddenRuns.delete(id); else hiddenRuns.add(id);
-  renderRunList(); renderLegend(); drawChart();
+function adjThresh(d) {
+  const el = document.getElementById('threshInput');
+  let v = parseFloat(el.value)||40;
+  v = Math.max(1, Math.min(400, v+d));
+  el.value = v; threshold = v; drawChart();
 }
+document.getElementById('threshInput').addEventListener('input', function(){
+  const v = parseFloat(this.value);
+  if (!isNaN(v) && v>=1 && v<=400) { threshold=v; drawChart(); }
+});
 
-// ═══════════════════════════════════════════════════
+// ═══════════════════════════════
 // CHART
-// ═══════════════════════════════════════════════════
-const cv = document.getElementById('chart');
-const cx = cv.getContext('2d');
+// ═══════════════════════════════
+const cv  = document.getElementById('chart');
+const ctx = cv.getContext('2d');
 
 function drawChart() {
   const rect = cv.getBoundingClientRect();
   const dpr  = window.devicePixelRatio||1;
-  cv.width   = rect.width  * dpr;
-  cv.height  = rect.height * dpr;
-  cx.scale(dpr, dpr);
-  const W = rect.width, H = rect.height;
+  cv.width   = rect.width*dpr; cv.height = rect.height*dpr;
+  ctx.scale(dpr,dpr);
+  const W=rect.width, H=rect.height;
+  ctx.clearRect(0,0,W,H);
 
-  cx.clearRect(0,0,W,H);
-
-  // Gather visible runs (completed + active)
   const vis = [
     ...runs.filter(r=>!hiddenRuns.has(r.id)),
-    ...(activeRun && activeRun.points.length>1 ? [activeRun] : [])
+    ...(activeRun&&activeRun.points.length>1?[activeRun]:[])
   ];
 
-  if (vis.length===0) {
-    cx.font='11px Share Tech Mono,monospace';
-    cx.fillStyle='#3a5060';
-    cx.textAlign='center';
-    cx.fillText('Nessun dato — supera la velocità soglia per avviare una run', W/2, H/2);
+  if (vis.length===0 || vis.every(r=>r.points.length<2)) {
+    ctx.font='11px DM Mono,monospace'; ctx.fillStyle='#4a6880'; ctx.textAlign='center';
+    ctx.fillText('Nessun dato — supera la soglia per avviare una run', W/2, H/2);
     return;
   }
 
-  // Find ranges
   let maxT=1000, maxV=0;
-  for (const r of vis) {
-    for (const p of r.points) {
-      if (p.t_ms > maxT) maxT = p.t_ms;
-      const vd = toDisplay(p.v_ms);
-      if (vd > maxV) maxV = vd;
-    }
+  const thr_disp = unit==='kmh' ? threshold : threshold/3.6;
+  for (const r of vis) for (const p of r.points) {
+    if (p.t_ms>maxT) maxT=p.t_ms;
+    const vd = toDisp(p.v_ms);
+    if (vd>maxV) maxV=vd;
   }
-  maxV = Math.max(maxV*1.15, toDisplay(threshold/3.6)*1.4);
-  maxT = maxT * 1.08;
+  maxV = Math.max(maxV*1.15, thr_disp*1.4);
+  maxT = maxT*1.08;
 
-  const PAD = {top:12, right:12, bottom:36, left:48};
-  const PW  = W - PAD.left - PAD.right;
-  const PH  = H - PAD.top  - PAD.bottom;
+  const PAD={top:14,right:16,bottom:36,left:46};
+  const PW=W-PAD.left-PAD.right, PH=H-PAD.top-PAD.bottom;
+  const mx=t=>PAD.left+(t/maxT)*PW;
+  const my=v=>PAD.top+PH-(v/maxV)*PH;
 
-  const mx = t => PAD.left + (t/maxT)*PW;
-  const my = v => PAD.top  + PH - (v/maxV)*PH;
-
-  // Grid + labels
-  const vSteps=5, tSteps=5;
-  cx.strokeStyle='rgba(24,32,48,0.95)'; cx.lineWidth=1;
-  for (let i=0;i<=vSteps;i++) {
-    const v = (maxV/vSteps)*i;
-    const y = my(v);
-    cx.beginPath(); cx.moveTo(PAD.left,y); cx.lineTo(PAD.left+PW,y); cx.stroke();
-    cx.font='9px Share Tech Mono,monospace';
-    cx.fillStyle='#3a5060';
-    cx.textAlign='right';
-    cx.fillText(v.toFixed(0), PAD.left-6, y+3);
+  // Grid
+  ctx.strokeStyle='rgba(28,42,56,0.9)'; ctx.lineWidth=1;
+  for (let i=0;i<=5;i++) {
+    const v=(maxV/5)*i, y=my(v);
+    ctx.beginPath(); ctx.moveTo(PAD.left,y); ctx.lineTo(PAD.left+PW,y); ctx.stroke();
+    ctx.font='9px DM Mono,monospace'; ctx.fillStyle='#4a6880'; ctx.textAlign='right';
+    ctx.fillText(v.toFixed(0), PAD.left-6, y+3);
   }
-  for (let i=0;i<=tSteps;i++) {
-    const t = (maxT/tSteps)*i;
-    const x = mx(t);
-    cx.beginPath(); cx.moveTo(x,PAD.top); cx.lineTo(x,PAD.top+PH); cx.stroke();
-    cx.font='9px Share Tech Mono,monospace';
-    cx.fillStyle='#3a5060';
-    cx.textAlign='center';
-    cx.fillText((t/1000).toFixed(1)+'s', x, PAD.top+PH+16);
+  for (let i=0;i<=5;i++) {
+    const t=(maxT/5)*i, x=mx(t);
+    ctx.beginPath(); ctx.moveTo(x,PAD.top); ctx.lineTo(x,PAD.top+PH); ctx.stroke();
+    ctx.font='9px DM Mono,monospace'; ctx.fillStyle='#4a6880'; ctx.textAlign='center';
+    ctx.fillText((t/1000).toFixed(1)+'s', x, PAD.top+PH+16);
   }
 
   // Axis labels
-  cx.save();
-  cx.translate(12, PAD.top+PH/2);
-  cx.rotate(-Math.PI/2);
-  cx.font='9px Share Tech Mono,monospace';
-  cx.fillStyle='#5a7890';
-  cx.textAlign='center';
-  cx.fillText(dispUnit(), 0, 0);
-  cx.restore();
-  cx.font='9px Share Tech Mono,monospace';
-  cx.fillStyle='#5a7890';
-  cx.textAlign='center';
-  cx.fillText('secondi dalla soglia', PAD.left+PW/2, H-4);
+  ctx.save(); ctx.translate(11,PAD.top+PH/2); ctx.rotate(-Math.PI/2);
+  ctx.font='9px DM Mono,monospace'; ctx.fillStyle='#4a6880'; ctx.textAlign='center';
+  ctx.fillText(dispUnit(),0,0); ctx.restore();
+  ctx.font='9px DM Mono,monospace'; ctx.fillStyle='#4a6880'; ctx.textAlign='center';
+  ctx.fillText('secondi dalla soglia', PAD.left+PW/2, H-4);
 
   // Threshold line
-  const thy = my(toDisplay(threshold/3.6));
-  cx.setLineDash([5,5]);
-  cx.strokeStyle='rgba(232,184,75,0.25)';
-  cx.lineWidth=1;
-  cx.beginPath(); cx.moveTo(PAD.left,thy); cx.lineTo(PAD.left+PW,thy); cx.stroke();
-  cx.setLineDash([]);
-  cx.font='9px Share Tech Mono,monospace';
-  cx.fillStyle='rgba(232,184,75,0.45)';
-  cx.textAlign='left';
-  cx.fillText('soglia ' + threshold + (unit==='kmh'?' km/h':' m/s'), PAD.left+4, thy-4);
+  const ty=my(thr_disp);
+  ctx.setLineDash([4,4]); ctx.strokeStyle='rgba(240,192,64,0.3)'; ctx.lineWidth=1;
+  ctx.beginPath(); ctx.moveTo(PAD.left,ty); ctx.lineTo(PAD.left+PW,ty); ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.font='9px DM Mono,monospace'; ctx.fillStyle='rgba(240,192,64,0.5)'; ctx.textAlign='left';
+  ctx.fillText('soglia '+threshold+(unit==='kmh'?' km/h':' m/s'), PAD.left+4, ty-4);
 
-  // Draw runs
+  // Runs
   for (const run of vis) {
     if (run.points.length<2) continue;
-    const col = run.color;
+    const col=run.color;
 
     // Area
-    cx.beginPath();
-    cx.moveTo(mx(run.points[0].t_ms), my(toDisplay(run.points[0].v_ms)));
+    ctx.beginPath();
+    ctx.moveTo(mx(run.points[0].t_ms), my(toDisp(run.points[0].v_ms)));
     for (let i=1;i<run.points.length;i++)
-      cx.lineTo(mx(run.points[i].t_ms), my(toDisplay(run.points[i].v_ms)));
-    cx.lineTo(mx(run.points[run.points.length-1].t_ms), my(toDisplay(threshold/3.6)));
-    cx.lineTo(mx(run.points[0].t_ms), my(toDisplay(threshold/3.6)));
-    cx.closePath();
-    cx.globalAlpha = 0.07;
-    cx.fillStyle = col;
-    cx.fill();
-    cx.globalAlpha = 1;
+      ctx.lineTo(mx(run.points[i].t_ms), my(toDisp(run.points[i].v_ms)));
+    ctx.lineTo(mx(run.points[run.points.length-1].t_ms), my(thr_disp));
+    ctx.lineTo(mx(run.points[0].t_ms), my(thr_disp));
+    ctx.closePath();
+    ctx.globalAlpha=0.09; ctx.fillStyle=col; ctx.fill(); ctx.globalAlpha=1;
 
     // Line
-    cx.beginPath();
-    cx.moveTo(mx(run.points[0].t_ms), my(toDisplay(run.points[0].v_ms)));
+    ctx.beginPath();
+    ctx.moveTo(mx(run.points[0].t_ms), my(toDisp(run.points[0].v_ms)));
     for (let i=1;i<run.points.length;i++)
-      cx.lineTo(mx(run.points[i].t_ms), my(toDisplay(run.points[i].v_ms)));
-    cx.strokeStyle = col;
-    cx.lineWidth = 2.2;
-    cx.lineJoin = 'round';
-    cx.shadowColor = col;
-    cx.shadowBlur = 7;
-    cx.stroke();
-    cx.shadowBlur = 0;
+      ctx.lineTo(mx(run.points[i].t_ms), my(toDisp(run.points[i].v_ms)));
+    ctx.strokeStyle=col; ctx.lineWidth=2.2; ctx.lineJoin='round';
+    ctx.shadowColor=col; ctx.shadowBlur=6; ctx.stroke(); ctx.shadowBlur=0;
 
     // Peak dot
     const pk = run.points.reduce((a,b)=>b.v_ms>a.v_ms?b:a);
-    cx.beginPath();
-    cx.arc(mx(pk.t_ms), my(toDisplay(pk.v_ms)), 4.5, 0, Math.PI*2);
-    cx.fillStyle = col;
-    cx.shadowColor = col; cx.shadowBlur=10;
-    cx.fill(); cx.shadowBlur=0;
+    ctx.beginPath();
+    ctx.arc(mx(pk.t_ms), my(toDisp(pk.v_ms)), 4.5, 0, Math.PI*2);
+    ctx.fillStyle=col; ctx.shadowColor=col; ctx.shadowBlur=10; ctx.fill(); ctx.shadowBlur=0;
   }
 
-  // Axes border
-  cx.strokeStyle='#182030'; cx.lineWidth=1;
-  cx.strokeRect(PAD.left, PAD.top, PW, PH);
+  ctx.strokeStyle='#1c2a38'; ctx.lineWidth=1;
+  ctx.strokeRect(PAD.left,PAD.top,PW,PH);
 }
 
-// ═══════════════════════════════════════════════════
+// ═══════════════════════════════
 // RUN LIST
-// ═══════════════════════════════════════════════════
+// ═══════════════════════════════
 function renderRunList() {
-  const list = document.getElementById('runList');
+  const list=document.getElementById('runList');
   if (runs.length===0) {
-    list.innerHTML='<div class="empty-msg">Avvia il sensore e supera la velocità soglia per registrare una run</div>';
+    list.innerHTML='<div class="no-runs" id="noRuns">Avvia il sensore e supera la soglia per registrare una run</div>';
     return;
   }
   list.innerHTML='';
-  [...runs].reverse().forEach(r => {
-    const dur = (r.duration_ms/1000).toFixed(2);
-    const div = document.createElement('div');
-    div.className = 'ritem' + (hiddenRuns.has(r.id)?' faded':'');
-    div.innerHTML = `
-      <div class="rcolor" style="background:${r.color}"></div>
-      <div class="rinfo">
-        <div class="rname">RUN #${r.id} · soglia ${r.thresholdKmh} km/h</div>
-        <div class="rsub">${dur}s · ${r.points.length} campioni · picco ${toDisplay(r.peak_ms).toFixed(1)} ${dispUnit()}</div>
+  [...runs].reverse().forEach(r=>{
+    const dur=(r.duration_ms/1000).toFixed(2);
+    const div=document.createElement('div');
+    div.className='run-item'+(hiddenRuns.has(r.id)?' faded':'');
+    div.innerHTML=`
+      <div class="run-color" style="background:${r.color}"></div>
+      <div class="run-info">
+        <div class="run-name">RUN #${r.id} · soglia ${r.threshKmh} km/h</div>
+        <div class="run-sub">${dur}s · ${r.points.length} campioni · picco ${toDisp(r.peak_ms).toFixed(1)} ${dispUnit()}</div>
       </div>
-      <div class="rpeak">${toDisplay(r.peak_ms).toFixed(1)} <small>${dispUnit()}</small></div>
-      <button class="rdel" onclick="deleteRun(${r.id},event)">✕</button>
+      <div class="run-peak">${toDisp(r.peak_ms).toFixed(1)} <small>${dispUnit()}</small></div>
+      <button class="run-del" onclick="deleteRun(${r.id},event)">✕</button>
     `;
-    div.addEventListener('click', ()=>toggleRunVis(r.id));
+    div.addEventListener('click',()=>toggleVis(r.id));
     list.appendChild(div);
   });
-  document.getElementById('mRuns').textContent = runs.length;
+  document.getElementById('mRuns').textContent=runs.length;
 }
 
+function toggleVis(id) {
+  if(hiddenRuns.has(id)) hiddenRuns.delete(id); else hiddenRuns.add(id);
+  renderRunList(); renderLegend(); drawChart();
+}
+function deleteRun(id,e) {
+  e.stopPropagation();
+  runs=runs.filter(r=>r.id!==id); hiddenRuns.delete(id);
+  renderRunList(); renderLegend(); drawChart();
+}
 function renderLegend() {
-  const leg = document.getElementById('legend');
-  leg.innerHTML='';
+  const leg=document.getElementById('chartLegend'); leg.innerHTML='';
   runs.forEach(r=>{
-    const el = document.createElement('div');
-    el.className='leg-item'+(hiddenRuns.has(r.id)?' faded':'');
-    el.innerHTML=`<div class="leg-dot" style="background:${r.color}"></div>#${r.id} ${toDisplay(r.peak_ms).toFixed(0)}${dispUnit()}`;
-    el.addEventListener('click',()=>toggleRunVis(r.id));
+    const el=document.createElement('div');
+    el.className='legend-item'+(hiddenRuns.has(r.id)?' faded':'');
+    el.innerHTML=`<div class="legend-dot" style="background:${r.color}"></div>#${r.id} ${toDisp(r.peak_ms).toFixed(0)}${dispUnit()}`;
+    el.addEventListener('click',()=>toggleVis(r.id));
     leg.appendChild(el);
   });
 }
 
-// ═══════════════════════════════════════════════════
-// INIT & PERMISSIONS
-// ═══════════════════════════════════════════════════
+// ═══════════════════════════════
+// PERMISSIONS & INIT
+// ═══════════════════════════════
 async function requestAll() {
-  // iOS motion permission
   if (typeof DeviceMotionEvent !== 'undefined' &&
       typeof DeviceMotionEvent.requestPermission === 'function') {
     try {
@@ -1184,24 +1020,13 @@ async function requestAll() {
 }
 
 function init() {
-  // Check GPS support
-  if (!navigator.geolocation) {
-    setChip('chipGps','NO GPS','err');
-  }
-  // Check motion
-  if (typeof DeviceMotionEvent === 'undefined') {
-    setChip('chipImu','NO IMU','err');
-  }
-  // iOS needs permission button, others skip overlay
-  if (typeof DeviceMotionEvent === 'undefined' ||
+  if (typeof DeviceMotionEvent==='undefined' ||
       typeof DeviceMotionEvent.requestPermission !== 'function') {
     document.getElementById('overlay').classList.add('hidden');
   }
-  drawChart();
-  renderRunList();
-  window.addEventListener('resize', ()=>{ drawChart(); });
+  drawChart(); renderRunList();
+  window.addEventListener('resize', drawChart);
 }
-
 init();
 </script>
 </body>
