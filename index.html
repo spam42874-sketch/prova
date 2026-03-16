@@ -2,1032 +2,509 @@
 <html lang="it">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<title>SpeedCurve</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>SpeedLog</title>
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=DM+Mono:wght@300;400;500&family=DM+Sans:wght@300;400;600&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@300;400;500;600;700&family=Share+Tech+Mono&display=swap');
 
-:root {
-  --bg:       #07090d;
-  --surface:  #0d1117;
-  --panel:    #111820;
-  --border:   #1c2a38;
-  --border2:  #243447;
-  --accent:   #f0c040;
-  --accent2:  #ff5f40;
-  --cyan:     #38c8f0;
-  --green:    #2deb8a;
-  --purple:   #a855f7;
-  --text:     #d4e4f4;
-  --dim:      #4a6880;
-  --dim2:     #6a8aaa;
-  --danger:   #ff3355;
-}
+  :root {
+    --bg: #0a0c0f;
+    --surface: #111318;
+    --surface2: #1a1d24;
+    --border: #252830;
+    --accent: #00e5ff;
+    --accent2: #ff6b35;
+    --green: #00ff88;
+    --red: #ff3366;
+    --text: #e8eaf0;
+    --muted: #5a5f72;
+  }
 
-* { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { height: 100%; overflow: hidden; }
 
-html, body {
-  background: var(--bg);
-  color: var(--text);
-  font-family: 'DM Sans', sans-serif;
-  min-height: 100vh;
-  overflow-x: hidden;
-}
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Rajdhani', sans-serif;
+    display: flex;
+    flex-direction: column;
+    height: 100dvh;
+  }
 
-/* Scanline overlay */
-body::after {
-  content:'';
-  position:fixed; inset:0;
-  background: repeating-linear-gradient(
-    0deg, transparent, transparent 2px,
-    rgba(0,0,0,0.06) 2px, rgba(0,0,0,0.06) 4px
-  );
-  pointer-events:none; z-index:999;
-}
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 16px 8px;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+  }
 
-/* Grid bg */
-body::before {
-  content:'';
-  position:fixed; inset:0;
-  background-image:
-    linear-gradient(rgba(56,200,240,0.025) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(56,200,240,0.025) 1px, transparent 1px);
-  background-size: 48px 48px;
-  pointer-events:none; z-index:0;
-}
+  .logo {
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: 4px;
+    color: var(--accent);
+    text-transform: uppercase;
+  }
 
-.app {
-  position:relative; z-index:1;
-  max-width:520px; margin:0 auto;
-  padding:16px 14px 32px;
-}
+  .gps-status {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    font-family: 'Share Tech Mono', monospace;
+    color: var(--muted);
+  }
 
-/* ── HEADER ── */
-.hdr {
-  display:flex; align-items:center; justify-content:space-between;
-  margin-bottom:18px; padding-bottom:12px;
-  border-bottom:1px solid var(--border);
-}
-.logo {
-  font-family:'Orbitron', monospace; font-size:16px; font-weight:900;
-  letter-spacing:3px; color: var(--accent);
-  text-shadow: 0 0 20px rgba(240,192,64,0.4);
-}
-.logo span { color: var(--cyan); }
-.hdr-right { display:flex; align-items:center; gap:8px; }
-.hz-pill {
-  font-family:'DM Mono', monospace; font-size:10px; letter-spacing:2px;
-  color: var(--cyan); border:1px solid rgba(56,200,240,0.3);
-  border-radius:20px; padding:3px 10px;
-}
-.gps-pill {
-  font-family:'DM Mono', monospace; font-size:10px; letter-spacing:1.5px;
-  color: var(--dim2); border:1px solid var(--border);
-  border-radius:20px; padding:3px 10px; transition:all .3s;
-}
-.gps-pill.ok  { color: var(--green); border-color:rgba(45,235,138,.3); }
-.gps-pill.err { color: var(--danger); border-color:rgba(255,51,85,.3); }
-.live-dot {
-  width:9px; height:9px; border-radius:50%;
-  background: var(--dim); transition:all .3s;
-}
-.live-dot.on {
-  background: var(--green);
-  box-shadow: 0 0 8px var(--green), 0 0 20px rgba(45,235,138,0.35);
-  animation: blink 1.4s ease-in-out infinite;
-}
-@keyframes blink { 0%,100%{opacity:1} 50%{opacity:.4} }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); transition: background 0.3s; }
+  .dot.active   { background: var(--green); box-shadow: 0 0 8px var(--green); animation: pulse 1.5s infinite; }
+  .dot.searching{ background: var(--accent2); animation: pulse 0.6s infinite; }
 
-/* ── SPEED HERO ── */
-.speed-hero {
-  background: var(--surface); border:1px solid var(--border);
-  border-radius:20px; padding:22px 20px 16px;
-  margin-bottom:12px; position:relative; overflow:hidden;
-}
-.speed-hero::before {
-  content:''; position:absolute; top:0; left:0; right:0; height:1px;
-  background: linear-gradient(90deg, transparent 0%, var(--accent) 50%, transparent 100%);
-  opacity:.6;
-}
-.speed-row { display:flex; align-items:flex-end; gap:6px; margin-bottom:6px; }
-.speed-num {
-  font-family:'Orbitron', monospace; font-size:84px; font-weight:900;
-  line-height:1; color: var(--accent);
-  text-shadow: 0 0 40px rgba(240,192,64,0.35);
-  letter-spacing:-2px; transition: color .2s, text-shadow .2s;
-  min-width:0;
-}
-.speed-num.running { color: var(--cyan); text-shadow: 0 0 40px rgba(56,200,240,0.35); }
-.speed-num.above   { color: var(--green); text-shadow: 0 0 40px rgba(45,235,138,0.4); }
-.speed-unit-col { display:flex; flex-direction:column; gap:4px; padding-bottom:10px; }
-.unit-btn {
-  font-family:'DM Mono', monospace; font-size:11px; letter-spacing:1px;
-  padding:4px 8px; border-radius:6px; border:1px solid var(--border2);
-  background:transparent; color:var(--dim2); cursor:pointer; transition:all .15s;
-}
-.unit-btn.sel { border-color:var(--accent); color:var(--accent); }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
 
-.speed-bar-wrap { width:100%; height:3px; background:var(--border); border-radius:2px; margin-bottom:10px; overflow:hidden; }
-.speed-bar {
-  height:100%; border-radius:2px;
-  background: linear-gradient(90deg, var(--cyan), var(--green));
-  width:0%; transition:width .12s linear;
-}
-.speed-meta {
-  display:flex; justify-content:space-between;
-  font-family:'DM Mono', monospace; font-size:11px;
-  color: var(--dim); letter-spacing:1.5px;
-}
-.speed-meta .val { color: var(--text); }
+  .main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    padding: 12px 16px;
+    gap: 12px;
+  }
 
-/* ── RUN BANNER ── */
-.run-banner {
-  display:none; align-items:center; gap:8px;
-  background: rgba(45,235,138,0.08); border:1px solid rgba(45,235,138,0.2);
-  border-radius:10px; padding:8px 14px; margin-bottom:12px;
-  font-family:'DM Mono', monospace; font-size:12px;
-  letter-spacing:1px; color: var(--green);
-}
-.run-banner.active { display:flex; }
-.run-pulse {
-  width:7px; height:7px; border-radius:50%;
-  background: var(--green); animation: blink .8s ease-in-out infinite; flex-shrink:0;
-}
-.run-time { margin-left:auto; font-size:16px; font-weight:500; color: var(--accent); }
+  .speed-display { text-align: center; }
 
-/* ── THRESHOLD ── */
-.thresh-card {
-  background: var(--surface); border:1px solid var(--border);
-  border-radius:14px; padding:14px 16px; margin-bottom:12px;
-  display:flex; align-items:center; gap:12px;
-}
-.thresh-label {
-  font-family:'DM Mono', monospace; font-size:10px; letter-spacing:3px;
-  color: var(--dim); text-transform:uppercase; white-space:nowrap;
-}
-.thresh-input-wrap { display:flex; align-items:center; gap:6px; flex:1; }
-.thresh-input {
-  background: var(--panel); border:1px solid var(--border2); border-radius:8px;
-  color: var(--accent); font-family:'Orbitron', monospace; font-size:22px; font-weight:700;
-  width:90px; text-align:center; padding:6px 4px; outline:none;
-  transition:border-color .2s; -moz-appearance:textfield;
-}
-.thresh-input::-webkit-outer-spin-button,
-.thresh-input::-webkit-inner-spin-button { -webkit-appearance:none; }
-.thresh-input:focus { border-color: var(--accent); box-shadow:0 0 0 2px rgba(240,192,64,.15); }
-.thresh-unit-lbl { font-family:'DM Mono', monospace; font-size:12px; color: var(--dim2); }
-.thresh-btns { display:flex; flex-direction:column; gap:4px; }
-.thresh-btn {
-  background: var(--panel); border:1px solid var(--border2); border-radius:6px;
-  color: var(--text); font-size:14px; width:28px; height:22px; cursor:pointer;
-  display:flex; align-items:center; justify-content:center; transition:all .15s;
-}
-.thresh-btn:hover { background:var(--border2); color:var(--accent); }
+  .speed-num {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: clamp(64px, 18vw, 96px);
+    line-height: 1;
+    color: var(--accent);
+    text-shadow: 0 0 30px rgba(0,229,255,0.5);
+    transition: color 0.2s;
+  }
+  .speed-num.above-threshold { color: var(--green); text-shadow: 0 0 30px rgba(0,255,136,0.5); }
 
-/* ── CONTROLS ── */
-.ctrl-row {
-  display:grid; grid-template-columns:1fr auto auto;
-  gap:8px; margin-bottom:12px;
-}
-.btn {
-  font-family:'DM Sans', sans-serif; font-weight:600; font-size:12px;
-  letter-spacing:2px; text-transform:uppercase; border:none;
-  border-radius:10px; padding:13px 16px; cursor:pointer;
-  transition:all .2s; white-space:nowrap;
-}
-.btn-main { background: var(--accent); color: #07090d; }
-.btn-main:hover { filter:brightness(1.1); transform:translateY(-1px); }
-.btn-main.stop { background: var(--danger); color:#fff; }
-.btn-secondary { background: var(--panel); border:1px solid var(--border2); color: var(--dim2); }
-.btn-secondary:hover { border-color:var(--text); color:var(--text); }
+  .speed-unit { font-size: 18px; letter-spacing: 3px; color: var(--muted); font-weight: 600; }
 
-/* ── METRICS ── */
-.metrics-grid {
-  display:grid; grid-template-columns:repeat(3,1fr);
-  gap:8px; margin-bottom:12px;
-}
-.metric-card {
-  background: var(--surface); border:1px solid var(--border);
-  border-radius:12px; padding:12px 10px; text-align:center;
-}
-.metric-lbl {
-  font-family:'DM Mono', monospace; font-size:8px; letter-spacing:2.5px;
-  color: var(--dim); text-transform:uppercase; display:block; margin-bottom:5px;
-}
-.metric-val {
-  font-family:'Orbitron', monospace; font-size:18px; font-weight:700;
-  color: var(--cyan); line-height:1;
-}
-.metric-val small { font-size:9px; color:var(--dim2); font-family:'DM Mono',monospace; font-weight:400; }
+  .speed-meta {
+    display: flex;
+    justify-content: center;
+    gap: 24px;
+    margin-top: 6px;
+    font-size: 13px;
+    font-family: 'Share Tech Mono', monospace;
+    color: var(--muted);
+  }
+  .speed-meta span { color: var(--text); }
 
-/* ── CHART ── */
-.chart-card {
-  background: var(--surface); border:1px solid var(--border);
-  border-radius:16px; padding:16px 14px 12px; margin-bottom:12px;
-}
-.chart-header {
-  display:flex; align-items:flex-start; justify-content:space-between;
-  margin-bottom:14px; gap:8px;
-}
-.chart-title {
-  font-family:'DM Mono', monospace; font-size:10px; letter-spacing:3px;
-  color: var(--dim); text-transform:uppercase;
-}
-.chart-legend { display:flex; flex-wrap:wrap; gap:8px; margin-top:6px; }
-.legend-item {
-  display:flex; align-items:center; gap:5px;
-  font-family:'DM Mono', monospace; font-size:9px; color: var(--dim2);
-  cursor:pointer; transition:opacity .2s; letter-spacing:.5px;
-}
-.legend-item.faded { opacity:.3; }
-.legend-dot { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
+  .controls { display: flex; gap: 10px; align-items: stretch; flex-shrink: 0; }
 
-canvas#chart { width:100%; height:220px; display:block; }
+  .threshold-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 8px 12px;
+    flex: 1;
+  }
+  .threshold-group label { font-size: 12px; letter-spacing: 2px; color: var(--muted); white-space: nowrap; }
+  .threshold-group input {
+    background: transparent; border: none;
+    color: var(--accent2); font-family: 'Share Tech Mono', monospace;
+    font-size: 20px; width: 60px; text-align: center; outline: none;
+  }
+  .threshold-group input::-webkit-inner-spin-button,
+  .threshold-group input::-webkit-outer-spin-button { -webkit-appearance: none; }
 
-/* ── RUNS LIST ── */
-.runs-card {
-  background: var(--surface); border:1px solid var(--border);
-  border-radius:16px; padding:14px;
-}
-.runs-header {
-  display:flex; align-items:center; justify-content:space-between; margin-bottom:12px;
-}
-.section-title {
-  font-family:'DM Mono', monospace; font-size:10px; letter-spacing:3px;
-  color: var(--dim); text-transform:uppercase;
-}
-.run-list { display:flex; flex-direction:column; gap:7px; }
-.run-item {
-  background: var(--panel); border:1px solid var(--border); border-radius:10px;
-  padding:10px 12px; display:flex; align-items:center; gap:10px;
-  cursor:pointer; transition:border-color .15s;
-}
-.run-item:hover { border-color:var(--border2); }
-.run-item.faded { opacity:.35; }
-.run-color { width:10px; height:28px; border-radius:3px; flex-shrink:0; }
-.run-info { flex:1; min-width:0; }
-.run-name {
-  font-family:'DM Mono', monospace; font-size:11px; letter-spacing:1px;
-  color: var(--text); margin-bottom:3px;
-}
-.run-sub { font-family:'DM Mono', monospace; font-size:10px; color: var(--dim); }
-.run-peak { font-family:'Orbitron', monospace; font-size:16px; font-weight:700; color: var(--accent); }
-.run-peak small { font-family:'DM Mono', monospace; font-size:9px; color: var(--dim2); font-weight:400; }
-.run-del {
-  background:transparent; border:none; color: var(--dim); font-size:14px;
-  cursor:pointer; padding:4px; line-height:1; transition:color .15s;
-}
-.run-del:hover { color:var(--danger); }
-.no-runs {
-  text-align:center; font-family:'DM Mono', monospace; font-size:11px;
-  color: var(--dim); letter-spacing:2px; padding:18px 0;
-}
+  .btn {
+    padding: 10px 18px; border: 1px solid; border-radius: 8px;
+    font-family: 'Rajdhani', sans-serif; font-size: 14px; font-weight: 700;
+    letter-spacing: 2px; cursor: pointer; text-transform: uppercase;
+    transition: all 0.15s; flex-shrink: 0;
+  }
+  .btn-start { background: rgba(0,255,136,0.1); border-color: var(--green); color: var(--green); }
+  .btn-start:hover { background: var(--green); color: var(--bg); box-shadow: 0 0 20px rgba(0,255,136,0.4); }
+  .btn-stop  { background: rgba(255,51,102,0.1); border-color: var(--red); color: var(--red); }
+  .btn-stop:hover { background: var(--red); color: #fff; box-shadow: 0 0 20px rgba(255,51,102,0.4); }
+  .btn-clear { background: rgba(90,95,114,0.1); border-color: var(--muted); color: var(--muted); font-size: 12px; padding: 10px 12px; }
+  .btn-clear:hover { border-color: var(--text); color: var(--text); }
 
-/* ── PERMISSION OVERLAY ── */
-.overlay {
-  position:fixed; inset:0; background: rgba(7,9,13,0.97);
-  display:flex; flex-direction:column; align-items:center; justify-content:center;
-  z-index:100; padding:32px; text-align:center;
-}
-.overlay.hidden { display:none; }
-.overlay-icon { font-size:48px; margin-bottom:18px; }
-.overlay h2 {
-  font-family:'Orbitron', monospace; font-size:18px; font-weight:900;
-  letter-spacing:3px; color: var(--accent); margin-bottom:12px;
-}
-.overlay p {
-  font-size:13px; color: var(--dim2); max-width:300px;
-  line-height:1.7; margin-bottom:28px;
-}
-.overlay button {
-  background: var(--accent); color: #07090d;
-  font-family:'Orbitron', monospace; font-size:12px; font-weight:700;
-  letter-spacing:3px; border:none; border-radius:12px;
-  padding:15px 36px; cursor:pointer; display:block;
-  width:100%; max-width:260px; margin-bottom:10px;
-}
-.overlay-note {
-  font-family:'DM Mono', monospace; font-size:10px;
-  color: var(--dim); letter-spacing:1px;
-}
+  .rec-bar {
+    display: none; align-items: center; gap: 10px;
+    padding: 8px 12px;
+    background: rgba(0,255,136,0.05); border: 1px solid rgba(0,255,136,0.2);
+    border-radius: 8px; flex-shrink: 0;
+    font-family: 'Share Tech Mono', monospace; font-size: 13px;
+  }
+  .rec-bar.show { display: flex; }
+  .rec-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--red); animation: pulse 0.8s infinite; flex-shrink: 0; }
+  .rec-info { color: var(--muted); flex: 1; }
+  .rec-info span { color: var(--green); }
+  .elapsed { font-size: 20px; color: var(--accent); }
+
+  /* run selector tabs */
+  .run-tabs {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    flex-shrink: 0;
+  }
+  .run-tab {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 11px;
+    padding: 3px 10px;
+    border-radius: 4px;
+    border: 1px solid;
+    cursor: pointer;
+    transition: all 0.15s;
+    opacity: 0.5;
+  }
+  .run-tab.active { opacity: 1; }
+
+  .chart-container {
+    flex: 1;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px;
+    min-height: 0;
+    position: relative;
+  }
+  .chart-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+  .chart-title  { font-size: 12px; letter-spacing: 3px; color: var(--muted); }
+  .max-badge {
+    font-family: 'Share Tech Mono', monospace; font-size: 12px;
+    color: var(--accent2); background: rgba(255,107,53,0.1);
+    border: 1px solid rgba(255,107,53,0.3); border-radius: 4px; padding: 2px 8px;
+  }
+  canvas { max-height: 100%; }
+
+  .log-panel {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 10px; flex-shrink: 0; max-height: 110px; overflow-y: auto;
+  }
+  .log-panel::-webkit-scrollbar { width: 4px; }
+  .log-panel::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  .log-row {
+    display: flex; padding: 5px 12px;
+    border-bottom: 1px solid rgba(37,40,48,0.5);
+    font-family: 'Share Tech Mono', monospace; font-size: 12px;
+    gap: 12px; align-items: center;
+  }
+  .log-row:last-child { border-bottom: none; }
+  .log-run   { width: 46px; font-weight: 700; }
+  .log-kmh   { color: var(--accent); width: 55px; }
+  .log-time  { color: var(--green); flex: 1; }
+  .log-delta { color: var(--muted); }
+  .log-empty { padding: 16px; text-align: center; color: var(--muted); font-size: 13px; letter-spacing: 2px; }
+
+  .dl-section {
+    flex: 1;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px;
+    overflow-y: auto;
+    min-height: 0;
+  }
+  .dl-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 10px;
+  }
+  .dl-card {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 12px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    margin-bottom: 8px;
+    gap: 12px;
+  }
+  .dl-info { display: flex; flex-direction: column; gap: 2px; flex: 1; }
+  .dl-run  { font-family: 'Share Tech Mono', monospace; font-size: 13px; font-weight: 700; }
+  .dl-stats{ font-family: 'Share Tech Mono', monospace; font-size: 11px; color: var(--text); }
+  .dl-file { font-family: 'Share Tech Mono', monospace; font-size: 10px; color: var(--muted); }
+  .btn-dl  {
+    background: rgba(0,229,255,0.1); border-color: var(--accent);
+    color: var(--accent); padding: 8px 14px; font-size: 13px;
+  }
+  .btn-dl:hover { background: var(--accent); color: var(--bg); }
+
+  .nav-btn {
+    font-family: 'Share Tech Mono', monospace; font-size: 12px;
+    letter-spacing: 2px; color: var(--accent); border: 1px solid var(--accent);
+    background: rgba(0,229,255,0.08); border-radius: 6px;
+    padding: 6px 12px; text-decoration: none; transition: all 0.15s;
+  }
+  .nav-btn:hover { background: var(--accent); color: var(--bg); }
 </style>
 </head>
 <body>
 
-<div class="overlay" id="overlay">
-  <div class="overlay-icon">📡</div>
-  <h2>PERMESSI</h2>
-  <p>SpeedCurve usa GPS ad alta precisione e accelerometro per misurare la velocità in modo accurato. Su iOS è richiesta autorizzazione esplicita.</p>
-  <button onclick="requestAll()">AUTORIZZA SENSORI</button>
-  <div class="overlay-note">GPS · IMU · COMPLEMENTARY FILTER</div>
-</div>
+<header>
+  <div class="logo">SpeedLog v0.14 <a href="v0.13.html">v0.13</a></div>
+  <a class="nav-btn" href="speedlog-chart.html">📊 GRAFICO</a>
+  <div class="gps-status">
+    <div class="dot" id="gpsDot"></div>
+    <span id="gpsLabel">GPS OFF</span>
+  </div>
+</header>
 
-<div class="app">
+<div class="main">
 
-  <header class="hdr">
-    <div class="logo">SPEED<span>CURVE v0.13 - <a href="v0.12.html">v0.12</a></span></div>
-    <div class="hdr-right">
-      <span class="hz-pill" id="hzPill">-- Hz</span>
-      <span class="gps-pill" id="gpsPill">GPS --</span>
-      <div class="live-dot" id="liveDot"></div>
-    </div>
-  </header>
-
-  <!-- Speed -->
-  <div class="speed-hero">
-    <div class="speed-row">
-      <div class="speed-num" id="speedNum">0.0</div>
-      <div class="speed-unit-col">
-        <button class="unit-btn sel" id="btnKmh" onclick="setUnit('kmh')">km/h</button>
-        <button class="unit-btn" id="btnMs" onclick="setUnit('ms')">m/s</button>
-      </div>
-    </div>
-    <div class="speed-bar-wrap"><div class="speed-bar" id="speedBar"></div></div>
+  <div class="speed-display">
+    <div class="speed-num" id="speedNum">0</div>
+    <div class="speed-unit">KM/H</div>
     <div class="speed-meta">
-      <span>MAX <span class="val" id="smMax">0.0</span></span>
-      <span>GPS <span class="val" id="smGps">--</span></span>
-      <span>PREC <span class="val" id="smAcc">--</span></span>
-      <span>IMU <span class="val" id="smImu">-- Hz</span></span>
+      MAX: <span id="maxSpeed">0</span> &nbsp;|&nbsp; ACC: <span id="accVal">—</span> m/s²
     </div>
   </div>
 
-  <!-- Run banner -->
-  <div class="run-banner" id="runBanner">
-    <div class="run-pulse"></div>
-    <span id="runBannerLabel">RUN #1 IN CORSO</span>
-    <span style="color:var(--text);font-size:11px">PEAK <span id="rbPeak">0.0</span></span>
-    <div class="run-time" id="runTimerDisplay">0.00s</div>
+  <div class="controls">
+    <div class="threshold-group">
+      <label>SOGLIA</label>
+      <input type="number" id="thresholdInput" value="40" min="0" max="300">
+      <label style="color:var(--muted);font-size:11px;">km/h</label>
+    </div>
+    <button class="btn btn-start" id="btnStart" onclick="startTracking()">▶ START</button>
+    <button class="btn btn-stop"  id="btnStop"  onclick="stopTracking()"  style="display:none">■ STOP</button>
+    <button class="btn btn-clear" onclick="clearData()">↺</button>
   </div>
 
-  <!-- Threshold -->
-  <div class="thresh-card">
-    <div class="thresh-label">SOGLIA</div>
-    <div class="thresh-input-wrap">
-      <div class="thresh-btns">
-        <button class="thresh-btn" onclick="adjThresh(+5)">▲</button>
-        <button class="thresh-btn" onclick="adjThresh(-5)">▼</button>
-      </div>
-      <input class="thresh-input" type="number" id="threshInput" value="40" min="1" max="400">
-      <span class="thresh-unit-lbl" id="threshUnitLbl">km/h</span>
-    </div>
+  <div class="rec-bar" id="recBar">
+    <div class="rec-dot"></div>
+    <div class="rec-info">REC &nbsp;|&nbsp; soglia <span id="recThresh">40</span> km/h &nbsp;|&nbsp; picco <span id="recMax">0</span> km/h</div>
+    <div class="elapsed" id="elapsedTime">0.000s</div>
   </div>
 
-  <!-- Controls -->
-  <div class="ctrl-row">
-    <button class="btn btn-main" id="btnMain" onclick="toggleSensor()">▶ AVVIA</button>
-    <button class="btn btn-secondary" onclick="resetSession()">RESET</button>
-    <button class="btn btn-secondary" onclick="clearRuns()">CLR RUNS</button>
-  </div>
-
-  <!-- Metrics -->
-  <div class="metrics-grid">
-    <div class="metric-card">
-      <span class="metric-lbl">GPS RAW</span>
-      <div class="metric-val" id="mGpsRaw">-- <small>m/s</small></div>
+  <div class="dl-section">
+    <div class="dl-header">
+      <span class="chart-title">RUN SALVATE</span>
+      <span class="max-badge" id="maxBadge">MAX: — km/h</span>
     </div>
-    <div class="metric-card">
-      <span class="metric-lbl">FUSO</span>
-      <div class="metric-val" id="mFused">-- <small>m/s</small></div>
-    </div>
-    <div class="metric-card">
-      <span class="metric-lbl">RUNS</span>
-      <div class="metric-val" id="mRuns">0</div>
-    </div>
-  </div>
-
-  <!-- Chart -->
-  <div class="chart-card">
-    <div class="chart-header">
-      <div>
-        <div class="chart-title">VELOCITÀ vs TEMPO (da soglia)</div>
-        <div class="chart-legend" id="chartLegend"></div>
-      </div>
-    </div>
-    <canvas id="chart"></canvas>
-  </div>
-
-  <!-- Runs list -->
-  <div class="runs-card">
-    <div class="runs-header">
-      <div class="section-title">RUN SALVATE</div>
-    </div>
-    <div class="run-list" id="runList">
-      <div class="no-runs" id="noRuns">Avvia il sensore e supera la soglia per registrare una run</div>
-    </div>
+    <div id="noRuns" class="log-empty">nessun dato registrato</div>
+    <div id="downloadList"></div>
   </div>
 
 </div>
 
 <script>
-'use strict';
+const RUN_COLORS = ['#00e5ff','#00ff88','#ff6b35','#c77dff','#ffce00'];
 
-// ═══════════════════════════════════════════════════════════════════
-// CONFIG
-// ═══════════════════════════════════════════════════════════════════
-const RUN_COLORS = ['#38c8f0','#f0c040','#2deb8a','#ff5f40','#a855f7','#fb923c','#ec4899','#ffd97a','#84cc16','#f43f5e'];
+// ── State ─────────────────────────────────────────────────────────────────────
+let watchId = null, isTracking = false, isRecording = false;
+let prevGpsKmh = null, prevGpsTs = null;
+let recordingStartTs = null, maxSpeedSession = 0;
+let currentSamples = [];   // {ts, kmh} raw GPS buffer
+let runCount = 0;
 
-// Kalman filter noise parameters
-// Q: process noise (how much we trust the IMU prediction per second²)
-// R: measurement noise (how much we trust the GPS reading, in (m/s)²)
-// Lower R = trust GPS more. Lower Q = smoother but slower to react to IMU.
-const KF_Q = 0.5;    // IMU process noise (m/s)² per second — tuned for phone accel quality
-const KF_R = 0.3;    // GPS measurement noise (m/s)² — typical GPS Doppler quality
-
-// High-pass filter for gravity removal
-const HP_ALPHA = 0.92;
-
-// Bias estimation: average accel over N still samples before a run
-const BIAS_WIN = 80;      // samples for bias estimation
-const STILL_THRESH = 0.15; // m/s² total accel to consider "still"
-
-// Max seconds to keep propagating IMU without any GPS fix
-const MAX_NO_GPS = 2.0;
-
-// ═══════════════════════════════════════════════════════════════════
-// STATE
-// ═══════════════════════════════════════════════════════════════════
-let unit      = 'kmh';
-let threshold = 40;   // km/h internally always
-let sensorOn  = false;
-
-// ── Kalman state ──
-let kf_x  = 0;    // estimated speed (m/s)
-let kf_P  = 1;    // estimate error covariance
-let kf_initialized = false;
-
-// ── GPS ──
-let geoWatchId  = null;
-let gpsSpeed_ms = null;
-let gpsTs       = null;
-let gpsHz_buf   = [];
-let lastGpsWall = null;  // performance.now() of last valid GPS fix
-
-// ── IMU ──
-let imuLastT  = null;
-let imuHz_buf = [];
-
-// High-pass filter state
-let hpX = 0, hpY = 0, hpZ = 0;
-let prevRawX = 0, prevRawY = 0, prevRawZ = 0;
-
-// Bias estimation (removed gravity offset that drifts into integral)
-let biasX = 0, biasY = 0, biasZ = 0;
-let biasSamples = [];
-let biasReady = false;
-
-// Seconds since last GPS measurement received
-let sinceGps = 999;
-
-// Session
-let sessionMax = 0;
-
-// ── Runs ──
-let runs      = [];
-let activeRun = null;
-let runIdCtr  = 0;
-let hiddenRuns = new Set();
-let wasAbove  = false;
-let rafTimer  = null;
-
-// ═══════════════════════════════════════════════════════════════════
-// HELPERS
-// ═══════════════════════════════════════════════════════════════════
-function toDisp(ms) { return unit === 'kmh' ? ms * 3.6 : ms; }
-function dispUnit() { return unit === 'kmh' ? 'km/h' : 'm/s'; }
-function threshMs() { return threshold / 3.6; }
-
-// ═══════════════════════════════════════════════════════════════════
-// KALMAN FILTER
-// ═══════════════════════════════════════════════════════════════════
-// Predict step: propagate state using IMU acceleration over dt seconds
-// accel_ms2 = signed linear acceleration along motion axis (m/s²)
-function kf_predict(accel_ms2, dt) {
-  // State transition: x_new = x + a*dt
-  kf_x = kf_x + accel_ms2 * dt;
-  if (kf_x < 0) kf_x = 0;  // speed can't be negative
-
-  // Covariance prediction: P_new = P + Q*dt
-  // (uncertainty grows over time proportionally to dt)
-  kf_P = kf_P + KF_Q * dt;
-}
-
-// Update step: correct with GPS measurement
-function kf_update(gps_ms) {
-  // Kalman gain: K = P / (P + R)
-  // High P (uncertain) → K near 1 → trust GPS fully
-  // Low P (confident)  → K near 0 → barely move toward GPS
-  const K = kf_P / (kf_P + KF_R);
-
-  // State update
-  kf_x = kf_x + K * (gps_ms - kf_x);
-  if (kf_x < 0) kf_x = 0;
-
-  // Covariance update: P = (1 - K) * P
-  kf_P = (1 - K) * kf_P;
-}
-
-// ═══════════════════════════════════════════════════════════════════
-// GPS
-// ═══════════════════════════════════════════════════════════════════
-function startGPS() {
-  if (!navigator.geolocation) { setGpsPill('NO GPS','err'); return; }
-  geoWatchId = navigator.geolocation.watchPosition(onGPS, onGPSErr, {
-    enableHighAccuracy: true,
-    maximumAge: 0,
-    timeout: 15000
+// ── Controls ──────────────────────────────────────────────────────────────────
+function startTracking() {
+  if (!navigator.geolocation) { alert('Geolocalizzazione non supportata.'); return; }
+  isTracking = true;
+  document.getElementById('btnStart').style.display = 'none';
+  document.getElementById('btnStop').style.display  = '';
+  document.getElementById('gpsDot').className       = 'dot searching';
+  document.getElementById('gpsLabel').textContent   = 'RICERCA...';
+  watchId = navigator.geolocation.watchPosition(onPosition, onError, {
+    enableHighAccuracy: true, maximumAge: 0, timeout: 10000
   });
-}
-function stopGPS() {
-  if (geoWatchId !== null) { navigator.geolocation.clearWatch(geoWatchId); geoWatchId = null; }
+  elapsedLoop();
 }
 
-function onGPS(pos) {
-  const now = performance.now();
-  const spd = pos.coords.speed; // m/s via Doppler, null if unavailable
+function stopTracking() {
+  if (isRecording) finaliseRun();
+  isTracking = false;
+  if (watchId !== null) { navigator.geolocation.clearWatch(watchId); watchId = null; }
+  document.getElementById('btnStart').style.display = '';
+  document.getElementById('btnStop').style.display  = 'none';
+  document.getElementById('recBar').classList.remove('show');
+  document.getElementById('gpsDot').className       = 'dot';
+  document.getElementById('gpsLabel').textContent   = 'GPS OFF';
+}
 
-  // GPS Hz measurement
-  if (gpsTs !== null) {
-    const dt = (now - gpsTs) / 1000;
-    if (dt > 0) {
-      gpsHz_buf.push(1 / dt);
-      if (gpsHz_buf.length > 10) gpsHz_buf.shift();
-      const hz = gpsHz_buf.reduce((a,b)=>a+b,0) / gpsHz_buf.length;
-      setGpsPill('GPS ' + hz.toFixed(1) + 'Hz', 'ok');
-      document.getElementById('smGps').textContent = hz.toFixed(1) + 'Hz';
-    }
+function clearData() {
+  maxSpeedSession = 0; isRecording = false; runCount = 0;
+  recordingStartTs = null; prevGpsKmh = null; prevGpsTs = null;
+  currentSamples = [];
+  document.getElementById('recBar').classList.remove('show');
+  document.getElementById('maxSpeed').textContent = '0';
+  document.getElementById('maxBadge').textContent = 'MAX: — km/h';
+  document.getElementById('downloadList').innerHTML = '';
+  document.getElementById('noRuns').style.display = 'block';
+}
+
+// ── GPS callback ──────────────────────────────────────────────────────────────
+function onPosition(pos) {
+  document.getElementById('gpsDot').className     = 'dot active';
+  document.getElementById('gpsLabel').textContent = 'GPS LIVE';
+
+  const curKmh = (pos.coords.speed || 0) * 3.6;
+  const curTs  = pos.timestamp;
+  const thresh = parseFloat(document.getElementById('thresholdInput').value) || 40;
+
+  document.getElementById('speedNum').textContent = Math.round(curKmh);
+  document.getElementById('speedNum').className   = 'speed-num' + (isRecording ? ' above-threshold' : '');
+
+  if (prevGpsTs !== null) {
+    const dt = (curTs - prevGpsTs) / 1000;
+    if (dt > 0) document.getElementById('accVal').textContent =
+      ((curKmh - prevGpsKmh) / 3.6 / dt).toFixed(2);
   }
-  gpsTs = now;
-
-  if (spd !== null && spd >= 0) {
-    gpsSpeed_ms = spd;
-    lastGpsWall = now;
-    sinceGps = 0;
-
-    document.getElementById('smAcc').textContent = pos.coords.accuracy.toFixed(0) + 'm';
-    document.getElementById('mGpsRaw').innerHTML = spd.toFixed(2) + ' <small>m/s</small>';
-
-    // Kalman update: GPS measurement corrects our estimate
-    if (!kf_initialized) {
-      kf_x = spd;
-      kf_P = KF_R;  // start with GPS-level confidence
-      kf_initialized = true;
-    } else {
-      kf_update(spd);
-    }
-
-    document.getElementById('mFused').innerHTML = kf_x.toFixed(2) + ' <small>m/s</small>';
-    onNewSpeed(kf_x, now);
-  }
-}
-function onGPSErr(e) { setGpsPill('GPS ERR','err'); }
-function setGpsPill(txt, cls) {
-  const el = document.getElementById('gpsPill');
-  el.textContent = txt; el.className = 'gps-pill ' + cls;
-}
-
-// ═══════════════════════════════════════════════════════════════════
-// IMU  — runs at full device frequency (~60–100 Hz)
-// Used to: (a) estimate accelerometer bias while still,
-//           (b) run Kalman predict step between GPS fixes
-// ═══════════════════════════════════════════════════════════════════
-function startIMU() { window.addEventListener('devicemotion', onIMU); }
-function stopIMU()  {
-  window.removeEventListener('devicemotion', onIMU);
-  hpX=hpY=hpZ=0; prevRawX=prevRawY=prevRawZ=0;
-  imuLastT=null; biasReady=false; biasSamples=[];
-}
-
-function onIMU(e) {
-  // Prefer linearAcceleration (gravity already removed by OS) if available and non-zero
-  const linAcc = e.acceleration;
-  const rawAcc = e.accelerationIncludingGravity;
-  if (!rawAcc && !linAcc) return;
-
-  const now = performance.now();
-
-  // ── Compute linear acceleration ──
-  let lx, ly, lz;
-  if (linAcc && (linAcc.x !== null) && (Math.abs(linAcc.x) + Math.abs(linAcc.y) + Math.abs(linAcc.z) > 0.001)) {
-    // OS already removed gravity — best case
-    lx = linAcc.x || 0;
-    ly = linAcc.y || 0;
-    lz = linAcc.z || 0;
-  } else {
-    // Fallback: high-pass filter on raw to remove gravity
-    const ax = rawAcc.x || 0, ay = rawAcc.y || 0, az = rawAcc.z || 0;
-    hpX = HP_ALPHA * (hpX + ax - prevRawX);
-    hpY = HP_ALPHA * (hpY + ay - prevRawY);
-    hpZ = HP_ALPHA * (hpZ + az - prevRawZ);
-    prevRawX = ax; prevRawY = ay; prevRawZ = az;
-    lx = hpX; ly = hpY; lz = hpZ;
+  if (curKmh > maxSpeedSession) {
+    maxSpeedSession = curKmh;
+    document.getElementById('maxSpeed').textContent = Math.round(maxSpeedSession);
+    document.getElementById('maxBadge').textContent = 'MAX: ' + Math.round(maxSpeedSession) + ' km/h';
   }
 
-  // ── Bias estimation (when nearly still, before first GPS fix) ──
-  const totalAccel = Math.sqrt(lx*lx + ly*ly + lz*lz);
-  if (!biasReady && gpsSpeed_ms === null) {
-    if (totalAccel < STILL_THRESH) {
-      biasSamples.push([lx, ly, lz]);
-      if (biasSamples.length >= BIAS_WIN) {
-        biasX = biasSamples.reduce((s,p)=>s+p[0],0) / BIAS_WIN;
-        biasY = biasSamples.reduce((s,p)=>s+p[1],0) / BIAS_WIN;
-        biasZ = biasSamples.reduce((s,p)=>s+p[2],0) / BIAS_WIN;
-        biasReady = true;
-        biasSamples = [];
+  if (!isRecording) {
+    const crossedUp    = prevGpsKmh !== null && prevGpsKmh < thresh && curKmh >= thresh;
+    const alreadyAbove = prevGpsKmh === null && curKmh >= thresh;
+    if (crossedUp || alreadyAbove) {
+      isRecording = true;
+      if (crossedUp && curKmh !== prevGpsKmh) {
+        const r = (thresh - prevGpsKmh) / (curKmh - prevGpsKmh);
+        recordingStartTs = prevGpsTs + r * (curTs - prevGpsTs);
+      } else {
+        recordingStartTs = curTs;
       }
-    } else {
-      biasSamples = []; // reset if phone moves during calibration
+      currentSamples = [{ ts: recordingStartTs, kmh: thresh }];
+      document.getElementById('recBar').classList.add('show');
+      document.getElementById('recThresh').textContent = thresh;
+      document.getElementById('recMax').textContent    = '0';
     }
   }
 
-  // Remove bias
-  if (biasReady) { lx -= biasX; ly -= biasY; lz -= biasZ; }
+  if (isRecording) {
+    if (curTs > currentSamples[currentSamples.length - 1].ts) {
+      currentSamples.push({ ts: curTs, kmh: curKmh });
+    }
+    document.getElementById('recMax').textContent = Math.round(maxSpeedSession);
+    if (curKmh < thresh) finaliseRun();
+  }
 
-  // ── IMU Hz display ──
-  if (imuLastT !== null) {
-    const dt = (now - imuLastT) / 1000;
-    if (dt > 0 && dt < 0.5) {
-      imuHz_buf.push(1 / dt);
-      if (imuHz_buf.length > 40) imuHz_buf.shift();
-      const hz = imuHz_buf.reduce((a,b)=>a+b,0) / imuHz_buf.length;
-      document.getElementById('hzPill').textContent = hz.toFixed(0) + ' Hz';
-      document.getElementById('smImu').textContent = hz.toFixed(0) + ' Hz';
+  prevGpsKmh = curKmh;
+  prevGpsTs  = curTs;
+}
 
-      sinceGps += dt;
+// ── Finalise: build integer km/h log and export file ─────────────────────────
+function finaliseRun() {
+  isRecording = false;
+  document.getElementById('recBar').classList.remove('show');
+  document.getElementById('elapsedTime').textContent = '—';
+  if (currentSamples.length < 2) return;
 
-      // ── Kalman predict (only if GPS has initialized us and not stale) ──
-      if (kf_initialized && sinceGps < MAX_NO_GPS) {
-        // Project 3D linear acceleration onto the current velocity direction.
-        // Since we only track scalar speed we use the magnitude with sign from
-        // the dominant axis — the axis most aligned with motion contributes most.
-        // Simple heuristic: dot product with the normalized velocity vector.
-        // Without knowing the phone orientation we use the magnitude, then
-        // gate it: if the phone is decelerating (total_accel dot previous_velocity < 0)
-        // we apply a negative sign.
-        // Better: use the component of acceleration along X (forward when upright).
-        // User should hold phone vertically in portrait — Y axis = forward travel.
-        // We use the axis with largest recent magnitude as motion axis.
-        const aForward = ly; // primary; if wrong orientation user can flip
-        kf_predict(aForward - biasY, dt);
+  const samples    = currentSamples.slice();
+  const startTs    = recordingStartTs;
+  const logEntries = buildIntegerLog(samples, startTs);
+  if (logEntries.length === 0) return;
 
-        // Clamp: speed can't grow unboundedly without GPS corrections
-        // If P (uncertainty) gets large, we stop relying on IMU and freeze
-        if (kf_P > 8) kf_x = kf_x; // let GPS correction pull it back
+  runCount++;
+  const color    = RUN_COLORS[(runCount - 1) % RUN_COLORS.length];
+  const filename = `speedlog_run${runCount}.json`;
+  const json     = buildJSON(logEntries, runCount, samples, startTs);
+  addDownloadItem(runCount, color, filename, json, logEntries);
+  currentSamples = [];
+}
 
-        document.getElementById('mFused').innerHTML = kf_x.toFixed(2) + ' <small>m/s</small>';
-        onNewSpeed(kf_x, now);
+// ── Build integer km/h crossing log (linear interpolation) ───────────────────
+function buildIntegerLog(samples, startTs) {
+  const peak  = Math.floor(Math.max(...samples.map(s => s.kmh)));
+  const start = Math.ceil(samples[0].kmh);
+  const log   = [];
+  for (let k = start; k <= peak; k++) {
+    for (let i = 0; i < samples.length - 1; i++) {
+      const A = samples[i], B = samples[i+1];
+      if (A.kmh <= k && B.kmh > k && B.kmh > A.kmh) {
+        const r = (k - A.kmh) / (B.kmh - A.kmh);
+        log.push({ kmh: k, time_ms: A.ts + r * (B.ts - A.ts) - startTs });
+        break;
       }
     }
   }
-
-  imuLastT = now;
+  return log;
 }
 
-// ═══════════════════════════════════════════════════════════════════
-// FUSED SPEED HANDLER
-// ═══════════════════════════════════════════════════════════════════
-function onNewSpeed(speed_ms, now) {
-  const s = Math.max(0, speed_ms);
-  if (s > sessionMax) sessionMax = s;
-  updateSpeedUI(s);
-  if (sensorOn) handleRunLogic(s, now);
+// ── Build JSON export ─────────────────────────────────────────────────────────
+function buildJSON(logEntries, runIdx, rawSamples, startTs) {
+  return JSON.stringify({
+    meta: {
+      run: runIdx,
+      date: new Date().toISOString(),
+      threshold_kmh: logEntries[0]?.kmh ?? 0,
+      peak_kmh: logEntries[logEntries.length - 1]?.kmh ?? 0,
+      duration_s: +((logEntries[logEntries.length - 1]?.time_ms ?? 0) / 1000).toFixed(3)
+    },
+    // Integer km/h crossings — use these for the chart
+    crossings: logEntries.map(e => ({
+      kmh:     e.kmh,
+      time_s:  +(e.time_ms / 1000).toFixed(3),
+      time_ms: +e.time_ms.toFixed(1)
+    })),
+    // Raw GPS samples — full fidelity for advanced analysis
+    raw_gps: rawSamples.map(s => ({
+      elapsed_ms: +(s.ts - startTs).toFixed(1),
+      kmh:        +s.kmh.toFixed(4)
+    }))
+  }, null, 2);
 }
 
-// ═══════════════════════════════
-// RUN LOGIC
-// ═══════════════════════════════
-function handleRunLogic(speed_ms, now) {
-  const above = speed_ms >= threshMs();
+// ── Add download card to UI ───────────────────────────────────────────────────
+function addDownloadItem(runIdx, color, filename, json, logEntries) {
+  document.getElementById('noRuns').style.display = 'none';
+  const list = document.getElementById('downloadList');
+  const peak = logEntries[logEntries.length - 1];
+  const dur  = (peak.time_ms / 1000).toFixed(2);
 
-  if (!wasAbove && above) {
-    startRun(now); wasAbove = true;
+  const card = document.createElement('div');
+  card.className = 'dl-card';
+  card.innerHTML = `
+    <div class="dl-info">
+      <span class="dl-run" style="color:${color}">RUN ${runIdx}</span>
+      <span class="dl-stats">${logEntries[0].kmh} → ${peak.kmh} km/h &nbsp;|&nbsp; ${dur}s</span>
+      <span class="dl-file">${filename}</span>
+    </div>
+    <button class="btn btn-dl" onclick="downloadFile('${filename}', ${runIdx})">↓ SCARICA</button>
+  `;
+  list.appendChild(card);
+
+  // Store JSON for download
+  window._runData = window._runData || {};
+  window._runData[runIdx] = { filename, json };
+}
+
+function downloadFile(filename, runIdx) {
+  const { json } = window._runData[runIdx];
+  const blob = new Blob([json], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = filename;
+  a.click();
+}
+
+// ── Elapsed loop ──────────────────────────────────────────────────────────────
+function elapsedLoop() {
+  if (!isTracking) return;
+  if (isRecording && recordingStartTs !== null) {
+    const t = Date.now() - recordingStartTs;
+    document.getElementById('elapsedTime').textContent = (t/1000).toFixed(3)+'s';
   }
-  if (wasAbove && above && activeRun) {
-    const t_ms = now - activeRun.startTs;
-    activeRun.points.push({ t_ms, v_ms: speed_ms });
-    if (speed_ms > activeRun.peak_ms) {
-      activeRun.peak_ms = speed_ms;
-      document.getElementById('rbPeak').textContent = toDisp(speed_ms).toFixed(1);
-    }
-    drawChart();
-  }
-  if (wasAbove && !above) {
-    if (activeRun && activeRun.points.length >= 4) closeRun();
-    else { activeRun = null; }
-    wasAbove = false; hideBanner(); stopTimer();
-  }
+  requestAnimationFrame(elapsedLoop);
 }
 
-function startRun(ts) {
-  runIdCtr++;
-  activeRun = {
-    id: runIdCtr,
-    color: RUN_COLORS[(runIdCtr-1) % RUN_COLORS.length],
-    startTs: ts, points: [], peak_ms: 0,
-    duration_ms: 0, threshKmh: threshold
-  };
-  showBanner(runIdCtr); startTimer();
+function onError(err) {
+  document.getElementById('gpsDot').className     = 'dot';
+  document.getElementById('gpsLabel').textContent = 'ERRORE';
+  console.warn('GPS error', err.code, err.message);
 }
-
-function closeRun() {
-  activeRun.duration_ms = activeRun.points[activeRun.points.length-1].t_ms;
-  runs.push({ ...activeRun, points:[...activeRun.points] });
-  activeRun = null;
-  stopTimer(); hideBanner();
-  renderRunList(); renderLegend(); drawChart();
-  document.getElementById('mRuns').textContent = runs.length;
-}
-
-// ═══════════════════════════════
-// TIMER
-// ═══════════════════════════════
-function startTimer() {
-  stopTimer();
-  const tick = () => {
-    if (!activeRun) return;
-    document.getElementById('runTimerDisplay').textContent =
-      ((performance.now()-activeRun.startTs)/1000).toFixed(2)+'s';
-    rafTimer = requestAnimationFrame(tick);
-  };
-  rafTimer = requestAnimationFrame(tick);
-}
-function stopTimer() {
-  if (rafTimer) { cancelAnimationFrame(rafTimer); rafTimer=null; }
-}
-function showBanner(id) {
-  document.getElementById('runBanner').classList.add('active');
-  document.getElementById('runBannerLabel').textContent = 'RUN #'+id+' IN CORSO';
-  document.getElementById('rbPeak').textContent = '0.0';
-}
-function hideBanner() {
-  document.getElementById('runBanner').classList.remove('active');
-  document.getElementById('runTimerDisplay').textContent = '0.00s';
-}
-
-// ═══════════════════════════════
-// SPEED UI
-// ═══════════════════════════════
-function updateSpeedUI(speed_ms) {
-  const disp = toDisp(speed_ms);
-  const thr_disp = unit==='kmh' ? threshold : threshold/3.6;
-  const maxDisp = Math.max(thr_disp*2.5, 30);
-
-  const el = document.getElementById('speedNum');
-  el.textContent = disp.toFixed(1);
-  el.className = 'speed-num' + (sensorOn ? (speed_ms>=threshMs()?' above':' running') : '');
-
-  document.getElementById('smMax').textContent = toDisp(sessionMax).toFixed(1);
-  document.getElementById('speedBar').style.width = Math.min(100,(disp/maxDisp)*100)+'%';
-}
-
-// ═══════════════════════════════
-// SENSOR TOGGLE
-// ═══════════════════════════════
-function toggleSensor() {
-  if (!sensorOn) {
-    sensorOn = true;
-    startGPS(); startIMU();
-    document.getElementById('btnMain').textContent = '■ FERMA';
-    document.getElementById('btnMain').classList.add('stop');
-    document.getElementById('liveDot').classList.add('on');
-  } else {
-    sensorOn = false;
-    stopGPS(); stopIMU();
-    if (activeRun && activeRun.points.length>=4) closeRun();
-    else { activeRun=null; stopTimer(); hideBanner(); wasAbove=false; }
-    document.getElementById('btnMain').textContent = '▶ AVVIA';
-    document.getElementById('btnMain').classList.remove('stop');
-    document.getElementById('liveDot').classList.remove('on');
-    setGpsPill('GPS --','');
-  }
-}
-
-function resetSession() {
-  if (activeRun && activeRun.points.length>=4) closeRun();
-  else { activeRun=null; stopTimer(); hideBanner(); }
-  wasAbove=false; gpsSpeed_ms=null; sinceGps=999;
-  kf_x=0; kf_P=1; kf_initialized=false;
-  hpX=hpY=hpZ=0; prevRawX=prevRawY=prevRawZ=0;
-  biasX=biasY=biasZ=0; biasReady=false; biasSamples=[];
-  sessionMax=0; gpsHz_buf=[]; imuHz_buf=[];
-  imuLastT=null; gpsTs=null; lastGpsWall=null;
-
-  document.getElementById('speedNum').textContent='0.0';
-  document.getElementById('speedNum').className='speed-num';
-  document.getElementById('smMax').textContent='0.0';
-  document.getElementById('smGps').textContent='--';
-  document.getElementById('smAcc').textContent='--';
-  document.getElementById('smImu').textContent='-- Hz';
-  document.getElementById('speedBar').style.width='0%';
-  document.getElementById('hzPill').textContent='-- Hz';
-  document.getElementById('mGpsRaw').innerHTML='-- <small>m/s</small>';
-  document.getElementById('mFused').innerHTML='-- <small>m/s</small>';
-  drawChart();
-}
-
-function clearRuns() {
-  runs=[]; hiddenRuns.clear();
-  renderRunList(); renderLegend(); drawChart();
-  document.getElementById('mRuns').textContent='0';
-}
-
-// ═══════════════════════════════
-// UNIT & THRESHOLD
-// ═══════════════════════════════
-function setUnit(u) {
-  unit = u;
-  document.getElementById('btnKmh').classList.toggle('sel', u==='kmh');
-  document.getElementById('btnMs').classList.toggle('sel', u==='ms');
-  document.getElementById('threshUnitLbl').textContent = u==='kmh'?'km/h':'m/s';
-  drawChart(); renderRunList();
-}
-
-function adjThresh(d) {
-  const el = document.getElementById('threshInput');
-  let v = parseFloat(el.value)||40;
-  v = Math.max(1, Math.min(400, v+d));
-  el.value = v; threshold = v; drawChart();
-}
-document.getElementById('threshInput').addEventListener('input', function(){
-  const v = parseFloat(this.value);
-  if (!isNaN(v) && v>=1 && v<=400) { threshold=v; drawChart(); }
-});
-
-// ═══════════════════════════════
-// CHART
-// ═══════════════════════════════
-const cv  = document.getElementById('chart');
-const ctx = cv.getContext('2d');
-
-function drawChart() {
-  const rect = cv.getBoundingClientRect();
-  const dpr  = window.devicePixelRatio||1;
-  cv.width   = rect.width*dpr; cv.height = rect.height*dpr;
-  ctx.scale(dpr,dpr);
-  const W=rect.width, H=rect.height;
-  ctx.clearRect(0,0,W,H);
-
-  const vis = [
-    ...runs.filter(r=>!hiddenRuns.has(r.id)),
-    ...(activeRun&&activeRun.points.length>1?[activeRun]:[])
-  ];
-
-  if (vis.length===0 || vis.every(r=>r.points.length<2)) {
-    ctx.font='11px DM Mono,monospace'; ctx.fillStyle='#4a6880'; ctx.textAlign='center';
-    ctx.fillText('Nessun dato — supera la soglia per avviare una run', W/2, H/2);
-    return;
-  }
-
-  let maxT=1000, maxV=0;
-  const thr_disp = unit==='kmh' ? threshold : threshold/3.6;
-  for (const r of vis) for (const p of r.points) {
-    if (p.t_ms>maxT) maxT=p.t_ms;
-    const vd = toDisp(p.v_ms);
-    if (vd>maxV) maxV=vd;
-  }
-  maxV = Math.max(maxV*1.15, thr_disp*1.4);
-  maxT = maxT*1.08;
-
-  const PAD={top:14,right:16,bottom:36,left:46};
-  const PW=W-PAD.left-PAD.right, PH=H-PAD.top-PAD.bottom;
-  const mx=t=>PAD.left+(t/maxT)*PW;
-  const my=v=>PAD.top+PH-(v/maxV)*PH;
-
-  // Grid
-  ctx.strokeStyle='rgba(28,42,56,0.9)'; ctx.lineWidth=1;
-  for (let i=0;i<=5;i++) {
-    const v=(maxV/5)*i, y=my(v);
-    ctx.beginPath(); ctx.moveTo(PAD.left,y); ctx.lineTo(PAD.left+PW,y); ctx.stroke();
-    ctx.font='9px DM Mono,monospace'; ctx.fillStyle='#4a6880'; ctx.textAlign='right';
-    ctx.fillText(v.toFixed(0), PAD.left-6, y+3);
-  }
-  for (let i=0;i<=5;i++) {
-    const t=(maxT/5)*i, x=mx(t);
-    ctx.beginPath(); ctx.moveTo(x,PAD.top); ctx.lineTo(x,PAD.top+PH); ctx.stroke();
-    ctx.font='9px DM Mono,monospace'; ctx.fillStyle='#4a6880'; ctx.textAlign='center';
-    ctx.fillText((t/1000).toFixed(1)+'s', x, PAD.top+PH+16);
-  }
-
-  // Axis labels
-  ctx.save(); ctx.translate(11,PAD.top+PH/2); ctx.rotate(-Math.PI/2);
-  ctx.font='9px DM Mono,monospace'; ctx.fillStyle='#4a6880'; ctx.textAlign='center';
-  ctx.fillText(dispUnit(),0,0); ctx.restore();
-  ctx.font='9px DM Mono,monospace'; ctx.fillStyle='#4a6880'; ctx.textAlign='center';
-  ctx.fillText('secondi dalla soglia', PAD.left+PW/2, H-4);
-
-  // Threshold line
-  const ty=my(thr_disp);
-  ctx.setLineDash([4,4]); ctx.strokeStyle='rgba(240,192,64,0.3)'; ctx.lineWidth=1;
-  ctx.beginPath(); ctx.moveTo(PAD.left,ty); ctx.lineTo(PAD.left+PW,ty); ctx.stroke();
-  ctx.setLineDash([]);
-  ctx.font='9px DM Mono,monospace'; ctx.fillStyle='rgba(240,192,64,0.5)'; ctx.textAlign='left';
-  ctx.fillText('soglia '+threshold+(unit==='kmh'?' km/h':' m/s'), PAD.left+4, ty-4);
-
-  // Runs
-  for (const run of vis) {
-    if (run.points.length<2) continue;
-    const col=run.color;
-
-    // Area
-    ctx.beginPath();
-    ctx.moveTo(mx(run.points[0].t_ms), my(toDisp(run.points[0].v_ms)));
-    for (let i=1;i<run.points.length;i++)
-      ctx.lineTo(mx(run.points[i].t_ms), my(toDisp(run.points[i].v_ms)));
-    ctx.lineTo(mx(run.points[run.points.length-1].t_ms), my(thr_disp));
-    ctx.lineTo(mx(run.points[0].t_ms), my(thr_disp));
-    ctx.closePath();
-    ctx.globalAlpha=0.09; ctx.fillStyle=col; ctx.fill(); ctx.globalAlpha=1;
-
-    // Line
-    ctx.beginPath();
-    ctx.moveTo(mx(run.points[0].t_ms), my(toDisp(run.points[0].v_ms)));
-    for (let i=1;i<run.points.length;i++)
-      ctx.lineTo(mx(run.points[i].t_ms), my(toDisp(run.points[i].v_ms)));
-    ctx.strokeStyle=col; ctx.lineWidth=2.2; ctx.lineJoin='round';
-    ctx.shadowColor=col; ctx.shadowBlur=6; ctx.stroke(); ctx.shadowBlur=0;
-
-    // Peak dot
-    const pk = run.points.reduce((a,b)=>b.v_ms>a.v_ms?b:a);
-    ctx.beginPath();
-    ctx.arc(mx(pk.t_ms), my(toDisp(pk.v_ms)), 4.5, 0, Math.PI*2);
-    ctx.fillStyle=col; ctx.shadowColor=col; ctx.shadowBlur=10; ctx.fill(); ctx.shadowBlur=0;
-  }
-
-  ctx.strokeStyle='#1c2a38'; ctx.lineWidth=1;
-  ctx.strokeRect(PAD.left,PAD.top,PW,PH);
-}
-
-// ═══════════════════════════════
-// RUN LIST
-// ═══════════════════════════════
-function renderRunList() {
-  const list=document.getElementById('runList');
-  if (runs.length===0) {
-    list.innerHTML='<div class="no-runs" id="noRuns">Avvia il sensore e supera la soglia per registrare una run</div>';
-    return;
-  }
-  list.innerHTML='';
-  [...runs].reverse().forEach(r=>{
-    const dur=(r.duration_ms/1000).toFixed(2);
-    const div=document.createElement('div');
-    div.className='run-item'+(hiddenRuns.has(r.id)?' faded':'');
-    div.innerHTML=`
-      <div class="run-color" style="background:${r.color}"></div>
-      <div class="run-info">
-        <div class="run-name">RUN #${r.id} · soglia ${r.threshKmh} km/h</div>
-        <div class="run-sub">${dur}s · ${r.points.length} campioni · picco ${toDisp(r.peak_ms).toFixed(1)} ${dispUnit()}</div>
-      </div>
-      <div class="run-peak">${toDisp(r.peak_ms).toFixed(1)} <small>${dispUnit()}</small></div>
-      <button class="run-del" onclick="deleteRun(${r.id},event)">✕</button>
-    `;
-    div.addEventListener('click',()=>toggleVis(r.id));
-    list.appendChild(div);
-  });
-  document.getElementById('mRuns').textContent=runs.length;
-}
-
-function toggleVis(id) {
-  if(hiddenRuns.has(id)) hiddenRuns.delete(id); else hiddenRuns.add(id);
-  renderRunList(); renderLegend(); drawChart();
-}
-function deleteRun(id,e) {
-  e.stopPropagation();
-  runs=runs.filter(r=>r.id!==id); hiddenRuns.delete(id);
-  renderRunList(); renderLegend(); drawChart();
-}
-function renderLegend() {
-  const leg=document.getElementById('chartLegend'); leg.innerHTML='';
-  runs.forEach(r=>{
-    const el=document.createElement('div');
-    el.className='legend-item'+(hiddenRuns.has(r.id)?' faded':'');
-    el.innerHTML=`<div class="legend-dot" style="background:${r.color}"></div>#${r.id} ${toDisp(r.peak_ms).toFixed(0)}${dispUnit()}`;
-    el.addEventListener('click',()=>toggleVis(r.id));
-    leg.appendChild(el);
-  });
-}
-
-// ═══════════════════════════════
-// PERMISSIONS & INIT
-// ═══════════════════════════════
-async function requestAll() {
-  if (typeof DeviceMotionEvent !== 'undefined' &&
-      typeof DeviceMotionEvent.requestPermission === 'function') {
-    try {
-      const s = await DeviceMotionEvent.requestPermission();
-      if (s !== 'granted') { alert('Permesso accelerometro negato.'); return; }
-    } catch(e) { console.warn(e); }
-  }
-  document.getElementById('overlay').classList.add('hidden');
-}
-
-function init() {
-  if (typeof DeviceMotionEvent==='undefined' ||
-      typeof DeviceMotionEvent.requestPermission !== 'function') {
-    document.getElementById('overlay').classList.add('hidden');
-  }
-  drawChart(); renderRunList();
-  window.addEventListener('resize', drawChart);
-}
-init();
 </script>
+
 </body>
 </html>
