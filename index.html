@@ -5,426 +5,576 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>SpeedLog</title>
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@300;400;500;600;700&family=Share+Tech+Mono&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@300;400;500;600;700&family=Share+Tech+Mono&display=swap');
+:root {
+  --bg:#0a0c0f; --surface:#111318; --border:#252830;
+  --accent:#00e5ff; --accent2:#ff6b35; --green:#00ff88;
+  --red:#ff3366; --text:#e8eaf0; --muted:#5a5f72;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{height:100%;overflow:hidden}
+body{background:var(--bg);color:var(--text);font-family:'Rajdhani',sans-serif;display:flex;flex-direction:column;height:100dvh}
+header{display:flex;align-items:center;justify-content:space-between;padding:10px 16px 8px;border-bottom:1px solid var(--border);flex-shrink:0}
+.logo{font-size:20px;font-weight:700;letter-spacing:4px;color:var(--accent)}
+.header-right{display:flex;align-items:center;gap:10px}
+.gps-status{display:flex;align-items:center;gap:6px;font-size:12px;font-family:'Share Tech Mono',monospace;color:var(--muted)}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--muted);transition:background .3s}
+.dot.active{background:var(--green);box-shadow:0 0 8px var(--green);animation:pulse 1.5s infinite}
+.dot.searching{background:var(--accent2);animation:pulse .6s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.nav-btn{font-family:'Share Tech Mono',monospace;font-size:11px;letter-spacing:2px;color:var(--accent);border:1px solid var(--accent);background:rgba(0,229,255,.08);border-radius:6px;padding:5px 10px;text-decoration:none;transition:all .15s}
+.nav-btn:hover{background:var(--accent);color:var(--bg)}
 
-  :root {
-    --bg: #0a0c0f;
-    --surface: #111318;
-    --surface2: #1a1d24;
-    --border: #252830;
-    --accent: #00e5ff;
-    --accent2: #ff6b35;
-    --green: #00ff88;
-    --red: #ff3366;
-    --text: #e8eaf0;
-    --muted: #5a5f72;
-  }
+/* Mode toggle */
+.mode-toggle{display:flex;gap:0;flex-shrink:0;margin:10px 16px 0}
+.mode-btn{flex:1;padding:8px;border:1px solid var(--border);font-family:'Rajdhani',sans-serif;font-size:14px;font-weight:700;letter-spacing:2px;cursor:pointer;text-transform:uppercase;background:transparent;color:var(--muted);transition:all .15s}
+.mode-btn:first-child{border-radius:8px 0 0 8px}
+.mode-btn:last-child{border-radius:0 8px 8px 0;border-left:none}
+.mode-btn.active{background:var(--accent);color:var(--bg);border-color:var(--accent)}
 
-  * { margin: 0; padding: 0; box-sizing: border-box; }
-  html, body { height: 100%; overflow: hidden; }
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden;padding:10px 16px;gap:10px}
+.speed-display{text-align:center;flex-shrink:0}
+.speed-num{font-family:'Share Tech Mono',monospace;font-size:clamp(56px,16vw,88px);line-height:1;color:var(--accent);text-shadow:0 0 30px rgba(0,229,255,.5);transition:color .2s}
+.speed-num.active{color:var(--green);text-shadow:0 0 30px rgba(0,255,136,.5)}
+.speed-unit{font-size:16px;letter-spacing:3px;color:var(--muted);font-weight:600}
+.speed-meta{display:flex;justify-content:center;gap:20px;margin-top:4px;font-size:12px;font-family:'Share Tech Mono',monospace;color:var(--muted)}
+.speed-meta span{color:var(--text)}
 
-  body {
-    background: var(--bg);
-    color: var(--text);
-    font-family: 'Rajdhani', sans-serif;
-    display: flex;
-    flex-direction: column;
-    height: 100dvh;
-  }
+/* Shared controls */
+.controls{display:flex;gap:8px;align-items:stretch;flex-shrink:0}
+.input-group{display:flex;align-items:center;gap:8px;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:7px 12px;flex:1}
+.input-group label{font-size:11px;letter-spacing:2px;color:var(--muted);white-space:nowrap}
+.input-group input{background:transparent;border:none;color:var(--accent2);font-family:'Share Tech Mono',monospace;font-size:18px;width:60px;text-align:center;outline:none}
+.input-group input::-webkit-inner-spin-button,.input-group input::-webkit-outer-spin-button{-webkit-appearance:none}
+.btn{padding:9px 16px;border:1px solid;border-radius:8px;font-family:'Rajdhani',sans-serif;font-size:13px;font-weight:700;letter-spacing:2px;cursor:pointer;text-transform:uppercase;transition:all .15s;flex-shrink:0}
+.btn-start{background:rgba(0,255,136,.1);border-color:var(--green);color:var(--green)}
+.btn-start:hover{background:var(--green);color:var(--bg)}
+.btn-stop{background:rgba(255,51,102,.1);border-color:var(--red);color:var(--red)}
+.btn-stop:hover{background:var(--red);color:#fff}
+.btn-clear{background:rgba(90,95,114,.1);border-color:var(--muted);color:var(--muted);font-size:11px;padding:9px 10px}
+.btn-clear:hover{border-color:var(--text);color:var(--text)}
 
-  header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 12px 16px 8px;
-    border-bottom: 1px solid var(--border);
-    flex-shrink: 0;
-  }
+/* Rec bar */
+.rec-bar{display:none;align-items:center;gap:10px;padding:7px 12px;background:rgba(0,255,136,.05);border:1px solid rgba(0,255,136,.2);border-radius:8px;flex-shrink:0;font-family:'Share Tech Mono',monospace;font-size:12px}
+.rec-bar.show{display:flex}
+.rec-dot{width:8px;height:8px;border-radius:50%;background:var(--red);animation:pulse .8s infinite;flex-shrink:0}
+.rec-info{color:var(--muted);flex:1}
+.rec-info span{color:var(--green)}
+.elapsed{font-size:18px;color:var(--accent)}
 
-  .logo {
-    font-size: 22px;
-    font-weight: 700;
-    letter-spacing: 4px;
-    color: var(--accent);
-    text-transform: uppercase;
-  }
+/* Download list */
+.dl-section{flex:1;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px;overflow-y:auto;min-height:0}
+.dl-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.dl-title{font-size:11px;letter-spacing:3px;color:var(--muted)}
+.max-badge{font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--accent2);background:rgba(255,107,53,.1);border:1px solid rgba(255,107,53,.3);border-radius:4px;padding:2px 8px}
+.dl-card{display:flex;align-items:center;justify-content:space-between;padding:9px 12px;border:1px solid var(--border);border-radius:8px;margin-bottom:7px;gap:10px}
+.dl-info{display:flex;flex-direction:column;gap:2px;flex:1}
+.dl-run{font-family:'Share Tech Mono',monospace;font-size:12px;font-weight:700}
+.dl-stats{font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--text)}
+.dl-file{font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--muted)}
+.btn-dl{background:rgba(0,229,255,.1);border-color:var(--accent);color:var(--accent);padding:7px 12px;font-size:12px}
+.btn-dl:hover{background:var(--accent);color:var(--bg)}
+.empty-msg{font-family:'Share Tech Mono',monospace;font-size:12px;color:var(--muted);text-align:center;padding:20px;letter-spacing:2px}
 
-  .gps-status {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    font-size: 13px;
-    font-family: 'Share Tech Mono', monospace;
-    color: var(--muted);
-  }
-
-  .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); transition: background 0.3s; }
-  .dot.active   { background: var(--green); box-shadow: 0 0 8px var(--green); animation: pulse 1.5s infinite; }
-  .dot.searching{ background: var(--accent2); animation: pulse 0.6s infinite; }
-
-  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
-
-  .main {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-    padding: 12px 16px;
-    gap: 12px;
-  }
-
-  .speed-display { text-align: center; }
-
-  .speed-num {
-    font-family: 'Share Tech Mono', monospace;
-    font-size: clamp(64px, 18vw, 96px);
-    line-height: 1;
-    color: var(--accent);
-    text-shadow: 0 0 30px rgba(0,229,255,0.5);
-    transition: color 0.2s;
-  }
-  .speed-num.above-threshold { color: var(--green); text-shadow: 0 0 30px rgba(0,255,136,0.5); }
-
-  .speed-unit { font-size: 18px; letter-spacing: 3px; color: var(--muted); font-weight: 600; }
-
-  .speed-meta {
-    display: flex;
-    justify-content: center;
-    gap: 24px;
-    margin-top: 6px;
-    font-size: 13px;
-    font-family: 'Share Tech Mono', monospace;
-    color: var(--muted);
-  }
-  .speed-meta span { color: var(--text); }
-
-  .controls { display: flex; gap: 10px; align-items: stretch; flex-shrink: 0; }
-
-  .threshold-group {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 8px 12px;
-    flex: 1;
-  }
-  .threshold-group label { font-size: 12px; letter-spacing: 2px; color: var(--muted); white-space: nowrap; }
-  .threshold-group input {
-    background: transparent; border: none;
-    color: var(--accent2); font-family: 'Share Tech Mono', monospace;
-    font-size: 20px; width: 60px; text-align: center; outline: none;
-  }
-  .threshold-group input::-webkit-inner-spin-button,
-  .threshold-group input::-webkit-outer-spin-button { -webkit-appearance: none; }
-
-  .btn {
-    padding: 10px 18px; border: 1px solid; border-radius: 8px;
-    font-family: 'Rajdhani', sans-serif; font-size: 14px; font-weight: 700;
-    letter-spacing: 2px; cursor: pointer; text-transform: uppercase;
-    transition: all 0.15s; flex-shrink: 0;
-  }
-  .btn-start { background: rgba(0,255,136,0.1); border-color: var(--green); color: var(--green); }
-  .btn-start:hover { background: var(--green); color: var(--bg); box-shadow: 0 0 20px rgba(0,255,136,0.4); }
-  .btn-stop  { background: rgba(255,51,102,0.1); border-color: var(--red); color: var(--red); }
-  .btn-stop:hover { background: var(--red); color: #fff; box-shadow: 0 0 20px rgba(255,51,102,0.4); }
-  .btn-clear { background: rgba(90,95,114,0.1); border-color: var(--muted); color: var(--muted); font-size: 12px; padding: 10px 12px; }
-  .btn-clear:hover { border-color: var(--text); color: var(--text); }
-
-  .rec-bar {
-    display: none; align-items: center; gap: 10px;
-    padding: 8px 12px;
-    background: rgba(0,255,136,0.05); border: 1px solid rgba(0,255,136,0.2);
-    border-radius: 8px; flex-shrink: 0;
-    font-family: 'Share Tech Mono', monospace; font-size: 13px;
-  }
-  .rec-bar.show { display: flex; }
-  .rec-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--red); animation: pulse 0.8s infinite; flex-shrink: 0; }
-  .rec-info { color: var(--muted); flex: 1; }
-  .rec-info span { color: var(--green); }
-  .elapsed { font-size: 20px; color: var(--accent); }
-
-  /* run selector tabs */
-  .run-tabs {
-    display: flex;
-    gap: 6px;
-    flex-wrap: wrap;
-    flex-shrink: 0;
-  }
-  .run-tab {
-    font-family: 'Share Tech Mono', monospace;
-    font-size: 11px;
-    padding: 3px 10px;
-    border-radius: 4px;
-    border: 1px solid;
-    cursor: pointer;
-    transition: all 0.15s;
-    opacity: 0.5;
-  }
-  .run-tab.active { opacity: 1; }
-
-  .chart-container {
-    flex: 1;
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    padding: 12px;
-    min-height: 0;
-    position: relative;
-  }
-  .chart-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
-  .chart-title  { font-size: 12px; letter-spacing: 3px; color: var(--muted); }
-  .max-badge {
-    font-family: 'Share Tech Mono', monospace; font-size: 12px;
-    color: var(--accent2); background: rgba(255,107,53,0.1);
-    border: 1px solid rgba(255,107,53,0.3); border-radius: 4px; padding: 2px 8px;
-  }
-  canvas { max-height: 100%; }
-
-  .log-panel {
-    background: var(--surface); border: 1px solid var(--border);
-    border-radius: 10px; flex-shrink: 0; max-height: 110px; overflow-y: auto;
-  }
-  .log-panel::-webkit-scrollbar { width: 4px; }
-  .log-panel::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
-
-  .log-row {
-    display: flex; padding: 5px 12px;
-    border-bottom: 1px solid rgba(37,40,48,0.5);
-    font-family: 'Share Tech Mono', monospace; font-size: 12px;
-    gap: 12px; align-items: center;
-  }
-  .log-row:last-child { border-bottom: none; }
-  .log-run   { width: 46px; font-weight: 700; }
-  .log-kmh   { color: var(--accent); width: 55px; }
-  .log-time  { color: var(--green); flex: 1; }
-  .log-delta { color: var(--muted); }
-  .log-empty { padding: 16px; text-align: center; color: var(--muted); font-size: 13px; letter-spacing: 2px; }
-
-  .dl-section {
-    flex: 1;
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    padding: 12px;
-    overflow-y: auto;
-    min-height: 0;
-  }
-  .dl-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 10px;
-  }
-  .dl-card {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 10px 12px;
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    margin-bottom: 8px;
-    gap: 12px;
-  }
-  .dl-info { display: flex; flex-direction: column; gap: 2px; flex: 1; }
-  .dl-run  { font-family: 'Share Tech Mono', monospace; font-size: 13px; font-weight: 700; }
-  .dl-stats{ font-family: 'Share Tech Mono', monospace; font-size: 11px; color: var(--text); }
-  .dl-file { font-family: 'Share Tech Mono', monospace; font-size: 10px; color: var(--muted); }
-  .btn-dl  {
-    background: rgba(0,229,255,0.1); border-color: var(--accent);
-    color: var(--accent); padding: 8px 14px; font-size: 13px;
-  }
-  .btn-dl:hover { background: var(--accent); color: var(--bg); }
-
-  .nav-btn {
-    font-family: 'Share Tech Mono', monospace; font-size: 12px;
-    letter-spacing: 2px; color: var(--accent); border: 1px solid var(--accent);
-    background: rgba(0,229,255,0.08); border-radius: 6px;
-    padding: 6px 12px; text-decoration: none; transition: all 0.15s;
-  }
-  .nav-btn:hover { background: var(--accent); color: var(--bg); }
+/* ── DRAG MODE ────────────────────────────────────────────────────────────── */
+.drag-panel{display:flex;flex-direction:column;gap:8px}
+.preset-list{display:flex;flex-direction:column;gap:6px;max-height:220px;overflow-y:auto}
+.preset-list::-webkit-scrollbar{width:4px}
+.preset-list::-webkit-scrollbar-thumb{background:var(--border)}
+.preset-row{display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--surface);border:1px solid var(--border);border-radius:8px;font-family:'Share Tech Mono',monospace;font-size:12px}
+.preset-row.done{border-color:var(--green);background:rgba(0,255,136,.05)}
+.preset-row.active-preset{border-color:var(--accent2);background:rgba(255,107,53,.05)}
+.preset-icon{width:22px;text-align:center;font-size:14px}
+.preset-name{flex:1;color:var(--text)}
+.preset-target{color:var(--accent2);width:60px;text-align:right}
+.preset-result{color:var(--green);font-size:11px;margin-left:4px}
+.btn-preset-del{background:none;border:none;color:var(--muted);cursor:pointer;font-size:14px;padding:0 2px;line-height:1}
+.btn-preset-del:hover{color:var(--red)}
+.add-preset-row{display:flex;gap:6px;align-items:center;flex-shrink:0}
+.add-preset-row select{background:var(--surface);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:'Share Tech Mono',monospace;font-size:11px;padding:6px 8px;outline:none;flex:1}
+.add-preset-row input{background:var(--surface);border:1px solid var(--border);border-radius:6px;color:var(--accent2);font-family:'Share Tech Mono',monospace;font-size:14px;padding:6px 8px;width:70px;text-align:center;outline:none}
+.add-preset-row input::-webkit-inner-spin-button{-webkit-appearance:none}
+.btn-add{background:rgba(0,229,255,.1);border:1px solid var(--accent);border-radius:6px;color:var(--accent);font-family:'Share Tech Mono',monospace;font-size:11px;padding:6px 10px;cursor:pointer;white-space:nowrap}
+.btn-add:hover{background:var(--accent);color:var(--bg)}
+.drag-status{display:none;padding:7px 12px;background:rgba(255,107,53,.05);border:1px solid rgba(255,107,53,.3);border-radius:8px;flex-shrink:0;font-family:'Share Tech Mono',monospace;font-size:12px;gap:10px;align-items:center}
+.drag-status.show{display:flex}
 </style>
 </head>
 <body>
 
 <header>
-  <div class="logo">SpeedLog v0.14 <a href="v0.13.html">v0.13</a></div>
-  <a class="nav-btn" href="speedlog-chart.html">📊 GRAFICO</a>
-  <div class="gps-status">
-    <div class="dot" id="gpsDot"></div>
-    <span id="gpsLabel">GPS OFF</span>
+  <div class="logo">SpeedLog</div>
+  <div class="header-right">
+    <div class="gps-status"><div class="dot" id="gpsDot"></div><span id="gpsLabel">GPS OFF</span></div>
+    <a class="nav-btn" href="speedlog-chart.html">📊 GRAFICO</a>
   </div>
 </header>
 
+<!-- Mode toggle -->
+<div class="mode-toggle">
+  <button class="mode-btn active" id="modeGrafico" onclick="setMode('grafico')">📈 GRAFICO</button>
+  <button class="mode-btn"        id="modeDrag"    onclick="setMode('drag')">🏁 DRAG</button>
+</div>
+
 <div class="main">
 
+  <!-- Speed display (shared) -->
   <div class="speed-display">
     <div class="speed-num" id="speedNum">0</div>
     <div class="speed-unit">KM/H</div>
-    <div class="speed-meta">
-      MAX: <span id="maxSpeed">0</span> &nbsp;|&nbsp; ACC: <span id="accVal">—</span> m/s²
+    <div class="speed-meta">MAX: <span id="maxSpeed">0</span> &nbsp;|&nbsp; ACC: <span id="accVal">—</span> m/s²</div>
+  </div>
+
+  <!-- ── GRAFICO UI ── -->
+  <div id="uiGrafico">
+    <div class="controls" style="margin-bottom:10px">
+      <div class="input-group">
+        <label>SOGLIA</label>
+        <input type="number" id="thresholdInput" value="40" min="0" max="300">
+        <label style="font-size:10px">km/h</label>
+      </div>
+      <button class="btn btn-start" id="gBtnStart" onclick="gStart()">▶ START</button>
+      <button class="btn btn-stop"  id="gBtnStop"  onclick="gStop()"  style="display:none">■ STOP</button>
+      <button class="btn btn-clear"                onclick="gClear()">↺</button>
+    </div>
+    <div class="rec-bar" id="gRecBar">
+      <div class="rec-dot"></div>
+      <div class="rec-info">REC &nbsp;|&nbsp; soglia <span id="gRecThresh">40</span> km/h &nbsp;|&nbsp; picco <span id="gRecMax">0</span> km/h</div>
+      <div class="elapsed" id="gElapsed">—</div>
+    </div>
+    <div class="dl-section" style="margin-top:10px">
+      <div class="dl-header">
+        <span class="dl-title">RUN SALVATE</span>
+        <span class="max-badge" id="gMaxBadge">MAX: — km/h</span>
+      </div>
+      <div class="empty-msg" id="gEmpty">nessun dato registrato</div>
+      <div id="gDownloadList"></div>
     </div>
   </div>
 
-  <div class="controls">
-    <div class="threshold-group">
-      <label>SOGLIA</label>
-      <input type="number" id="thresholdInput" value="40" min="0" max="300">
-      <label style="color:var(--muted);font-size:11px;">km/h</label>
+  <!-- ── DRAG UI ── -->
+  <div id="uiDrag" style="display:none;flex:1;display:none;flex-direction:column;gap:10px">
+
+    <div class="drag-panel">
+      <!-- Preset list -->
+      <div class="preset-list" id="presetList"></div>
+
+      <!-- Add preset row -->
+      <div class="add-preset-row">
+        <select id="newPresetType">
+          <option value="speed">0 → X km/h</option>
+          <option value="distance">0 → X metri</option>
+          <option value="time">0 → X secondi</option>
+        </select>
+        <input type="number" id="newPresetVal" placeholder="val" min="1">
+        <button class="btn-add" onclick="addPreset()">+ AGGIUNGI</button>
+      </div>
     </div>
-    <button class="btn btn-start" id="btnStart" onclick="startTracking()">▶ START</button>
-    <button class="btn btn-stop"  id="btnStop"  onclick="stopTracking()"  style="display:none">■ STOP</button>
-    <button class="btn btn-clear" onclick="clearData()">↺</button>
-  </div>
 
-  <div class="rec-bar" id="recBar">
-    <div class="rec-dot"></div>
-    <div class="rec-info">REC &nbsp;|&nbsp; soglia <span id="recThresh">40</span> km/h &nbsp;|&nbsp; picco <span id="recMax">0</span> km/h</div>
-    <div class="elapsed" id="elapsedTime">0.000s</div>
-  </div>
-
-  <div class="dl-section">
-    <div class="dl-header">
-      <span class="chart-title">RUN SALVATE</span>
-      <span class="max-badge" id="maxBadge">MAX: — km/h</span>
+    <!-- Drag controls -->
+    <div class="controls">
+      <button class="btn btn-start" id="dBtnStart" onclick="dStart()">▶ ARMA</button>
+      <button class="btn btn-stop"  id="dBtnStop"  onclick="dStop()"  style="display:none">■ ANNULLA</button>
+      <button class="btn btn-clear"                onclick="dClear()">↺</button>
     </div>
-    <div id="noRuns" class="log-empty">nessun dato registrato</div>
-    <div id="downloadList"></div>
+
+    <!-- Drag status -->
+    <div class="drag-status" id="dragStatus">
+      <div class="rec-dot"></div>
+      <div style="flex:1;color:var(--muted)">IN CORSO &nbsp;|&nbsp; target: <span id="dragTarget" style="color:var(--accent2)">—</span></div>
+      <div class="elapsed" id="dElapsed">0.000s</div>
+    </div>
+
+    <!-- Drag downloads -->
+    <div class="dl-section" style="flex:1">
+      <div class="dl-header">
+        <span class="dl-title">DRAG RUN SALVATE</span>
+      </div>
+      <div class="empty-msg" id="dEmpty">nessun dato registrato</div>
+      <div id="dDownloadList"></div>
+    </div>
   </div>
 
-</div>
+</div><!-- .main -->
 
 <script>
+// ═══════════════════════════════════════════════════════════
+// SHARED STATE
+// ═══════════════════════════════════════════════════════════
 const RUN_COLORS = ['#00e5ff','#00ff88','#ff6b35','#c77dff','#ffce00'];
+let watchId=null, isTracking=false;
+let prevKmh=null, prevTs=null, maxKmh=0;
+let mode = 'grafico'; // 'grafico' | 'drag'
 
-// ── State ─────────────────────────────────────────────────────────────────────
-let watchId = null, isTracking = false, isRecording = false;
-let prevGpsKmh = null, prevGpsTs = null;
-let recordingStartTs = null, maxSpeedSession = 0;
-let currentSamples = [];   // {ts, kmh} raw GPS buffer
-let runCount = 0;
+function setMode(m) {
+  mode = m;
+  document.getElementById('modeGrafico').classList.toggle('active', m==='grafico');
+  document.getElementById('modeDrag').classList.toggle('active', m==='drag');
+  document.getElementById('uiGrafico').style.display = m==='grafico' ? 'block' : 'none';
+  document.getElementById('uiDrag').style.display    = m==='drag'    ? 'flex'  : 'none';
+  if (m==='drag') document.getElementById('uiDrag').style.flexDirection='column';
+}
 
-// ── Controls ──────────────────────────────────────────────────────────────────
-function startTracking() {
-  if (!navigator.geolocation) { alert('Geolocalizzazione non supportata.'); return; }
+// ── GPS shared ────────────────────────────────────────────
+function startGPS() {
+  if (!navigator.geolocation) { alert('Geolocalizzazione non supportata.'); return false; }
   isTracking = true;
-  document.getElementById('btnStart').style.display = 'none';
-  document.getElementById('btnStop').style.display  = '';
-  document.getElementById('gpsDot').className       = 'dot searching';
-  document.getElementById('gpsLabel').textContent   = 'RICERCA...';
-  watchId = navigator.geolocation.watchPosition(onPosition, onError, {
-    enableHighAccuracy: true, maximumAge: 0, timeout: 10000
+  document.getElementById('gpsDot').className   = 'dot searching';
+  document.getElementById('gpsLabel').textContent = 'RICERCA...';
+  watchId = navigator.geolocation.watchPosition(onPosition, onGPSError, {
+    enableHighAccuracy:true, maximumAge:0, timeout:10000
   });
-  elapsedLoop();
+  return true;
 }
-
-function stopTracking() {
-  if (isRecording) finaliseRun();
+function stopGPS() {
   isTracking = false;
-  if (watchId !== null) { navigator.geolocation.clearWatch(watchId); watchId = null; }
-  document.getElementById('btnStart').style.display = '';
-  document.getElementById('btnStop').style.display  = 'none';
-  document.getElementById('recBar').classList.remove('show');
-  document.getElementById('gpsDot').className       = 'dot';
-  document.getElementById('gpsLabel').textContent   = 'GPS OFF';
+  if (watchId!==null) { navigator.geolocation.clearWatch(watchId); watchId=null; }
+  document.getElementById('gpsDot').className   = 'dot';
+  document.getElementById('gpsLabel').textContent = 'GPS OFF';
 }
-
-function clearData() {
-  maxSpeedSession = 0; isRecording = false; runCount = 0;
-  recordingStartTs = null; prevGpsKmh = null; prevGpsTs = null;
-  currentSamples = [];
-  document.getElementById('recBar').classList.remove('show');
-  document.getElementById('maxSpeed').textContent = '0';
-  document.getElementById('maxBadge').textContent = 'MAX: — km/h';
-  document.getElementById('downloadList').innerHTML = '';
-  document.getElementById('noRuns').style.display = 'block';
+function onGPSError(e) {
+  document.getElementById('gpsDot').className   = 'dot';
+  document.getElementById('gpsLabel').textContent = 'ERRORE';
+  console.warn('GPS', e.code, e.message);
 }
-
-// ── GPS callback ──────────────────────────────────────────────────────────────
 function onPosition(pos) {
-  document.getElementById('gpsDot').className     = 'dot active';
+  document.getElementById('gpsDot').className   = 'dot active';
   document.getElementById('gpsLabel').textContent = 'GPS LIVE';
-
-  const curKmh = (pos.coords.speed || 0) * 3.6;
-  const curTs  = pos.timestamp;
-  const thresh = parseFloat(document.getElementById('thresholdInput').value) || 40;
-
-  document.getElementById('speedNum').textContent = Math.round(curKmh);
-  document.getElementById('speedNum').className   = 'speed-num' + (isRecording ? ' above-threshold' : '');
-
-  if (prevGpsTs !== null) {
-    const dt = (curTs - prevGpsTs) / 1000;
-    if (dt > 0) document.getElementById('accVal').textContent =
-      ((curKmh - prevGpsKmh) / 3.6 / dt).toFixed(2);
+  const kmh = (pos.coords.speed||0)*3.6;
+  const ts  = pos.timestamp;
+  document.getElementById('speedNum').textContent = Math.round(kmh);
+  if (prevTs!==null) {
+    const dt=(ts-prevTs)/1000;
+    if (dt>0) document.getElementById('accVal').textContent=((kmh-prevKmh)/3.6/dt).toFixed(2);
   }
-  if (curKmh > maxSpeedSession) {
-    maxSpeedSession = curKmh;
-    document.getElementById('maxSpeed').textContent = Math.round(maxSpeedSession);
-    document.getElementById('maxBadge').textContent = 'MAX: ' + Math.round(maxSpeedSession) + ' km/h';
+  if (kmh>maxKmh) {
+    maxKmh=kmh;
+    document.getElementById('maxSpeed').textContent=Math.round(maxKmh);
   }
+  if (mode==='grafico') gOnPosition(kmh, ts);
+  else                   dOnPosition(kmh, ts);
+  prevKmh=kmh; prevTs=ts;
+}
 
-  if (!isRecording) {
-    const crossedUp    = prevGpsKmh !== null && prevGpsKmh < thresh && curKmh >= thresh;
-    const alreadyAbove = prevGpsKmh === null && curKmh >= thresh;
-    if (crossedUp || alreadyAbove) {
-      isRecording = true;
-      if (crossedUp && curKmh !== prevGpsKmh) {
-        const r = (thresh - prevGpsKmh) / (curKmh - prevGpsKmh);
-        recordingStartTs = prevGpsTs + r * (curTs - prevGpsTs);
-      } else {
-        recordingStartTs = curTs;
+// ═══════════════════════════════════════════════════════════
+// GRAFICO MODE
+// ═══════════════════════════════════════════════════════════
+let gRecording=false, gStartTs=null, gSamples=[], gRunCount=0;
+window._gData = {};
+
+function gStart() {
+  if (!startGPS()) return;
+  document.getElementById('gBtnStart').style.display='none';
+  document.getElementById('gBtnStop').style.display='';
+  gElapsedLoop();
+}
+function gStop() {
+  if (gRecording) gFinalise();
+  stopGPS();
+  document.getElementById('gBtnStart').style.display='';
+  document.getElementById('gBtnStop').style.display='none';
+  document.getElementById('gRecBar').classList.remove('show');
+}
+function gClear() {
+  gRunCount=0; maxKmh=0;
+  document.getElementById('gDownloadList').innerHTML='';
+  document.getElementById('gEmpty').style.display='block';
+  document.getElementById('maxSpeed').textContent='0';
+  document.getElementById('gMaxBadge').textContent='MAX: — km/h';
+  window._gData={};
+}
+function gOnPosition(kmh, ts) {
+  const thresh = parseFloat(document.getElementById('thresholdInput').value)||40;
+  document.getElementById('speedNum').className='speed-num'+(gRecording?' active':'');
+  document.getElementById('gRecMax').textContent=Math.round(maxKmh);
+  document.getElementById('gMaxBadge').textContent='MAX: '+Math.round(maxKmh)+' km/h';
+
+  if (!gRecording) {
+    const crossedUp = prevKmh!==null && prevKmh<thresh && kmh>=thresh;
+    const above     = prevKmh===null && kmh>=thresh;
+    if (crossedUp||above) {
+      gRecording=true;
+      gStartTs = crossedUp&&kmh!==prevKmh
+        ? prevTs+(thresh-prevKmh)/(kmh-prevKmh)*(ts-prevTs) : ts;
+      gSamples=[{ts:gStartTs,kmh:thresh}];
+      document.getElementById('gRecBar').classList.add('show');
+      document.getElementById('gRecThresh').textContent=thresh;
+    }
+  }
+  if (gRecording) {
+    if (gSamples.length===0||ts>gSamples[gSamples.length-1].ts)
+      gSamples.push({ts,kmh});
+    if (kmh<thresh) gFinalise();
+  }
+}
+function gFinalise() {
+  gRecording=false;
+  document.getElementById('gRecBar').classList.remove('show');
+  document.getElementById('gElapsed').textContent='—';
+  if (gSamples.length<2) return;
+  const samples=gSamples.slice(), startTs=gStartTs;
+  const log=buildIntegerLog(samples,startTs);
+  if (!log.length) return;
+  gRunCount++;
+  const color=RUN_COLORS[(gRunCount-1)%RUN_COLORS.length];
+  const fn='speedlog_run'+gRunCount+'.json';
+  const peak=log[log.length-1];
+  const json=JSON.stringify({
+    meta:{type:'grafico',run:gRunCount,date:new Date().toISOString(),
+          threshold_kmh:log[0].kmh,peak_kmh:peak.kmh,duration_s:+(peak.time_ms/1000).toFixed(3)},
+    crossings:log.map(e=>({kmh:e.kmh,time_s:+(e.time_ms/1000).toFixed(3),time_ms:+e.time_ms.toFixed(1)})),
+    raw_gps:samples.map(s=>({elapsed_ms:+(s.ts-startTs).toFixed(1),kmh:+s.kmh.toFixed(4)}))
+  },null,2);
+  window._gData[gRunCount]={fn,json};
+  document.getElementById('gEmpty').style.display='none';
+  const card=document.createElement('div');
+  card.className='dl-card';
+  card.innerHTML=`<div class="dl-info">
+    <span class="dl-run" style="color:${color}">RUN ${gRunCount}</span>
+    <span class="dl-stats">${log[0].kmh} → ${peak.kmh} km/h &nbsp;|&nbsp; ${(peak.time_ms/1000).toFixed(2)}s</span>
+    <span class="dl-file">${fn}</span>
+  </div><button class="btn btn-dl" onclick="gDownload(${gRunCount})">↓ SCARICA</button>`;
+  document.getElementById('gDownloadList').appendChild(card);
+  gSamples=[];
+}
+function gDownload(idx) {
+  const {fn,json}=window._gData[idx];
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([json],{type:'application/json'}));
+  a.download=fn; a.click();
+}
+function gElapsedLoop() {
+  if (!isTracking) return;
+  if (gRecording&&gStartTs!==null)
+    document.getElementById('gElapsed').textContent=((Date.now()-gStartTs)/1000).toFixed(3)+'s';
+  requestAnimationFrame(gElapsedLoop);
+}
+
+// ═══════════════════════════════════════════════════════════
+// DRAG MODE
+// ═══════════════════════════════════════════════════════════
+let presets=[], dArmed=false, dRunning=false, dStartTs=null, dSamples=[], dRunCount=0, dDecelStart=null;
+window._dData={};
+
+const DEFAULT_PRESETS=[
+  {id:1,type:'speed',   target:100, label:'0 → 100 km/h'},
+  {id:2,type:'distance',target:400, label:'0 → 400 m'},
+  {id:3,type:'time',    target:10,  label:'0 → 10 s'},
+];
+let presetIdCounter=4;
+
+function initPresets() {
+  presets=DEFAULT_PRESETS.map(p=>({...p,done:false,result:null}));
+  renderPresets();
+}
+function addPreset() {
+  const type=document.getElementById('newPresetType').value;
+  const val =parseFloat(document.getElementById('newPresetVal').value);
+  if (!val||val<=0) return;
+  const labels={'speed':'km/h','distance':'m','time':'s'};
+  const names ={'speed':'km/h','distance':'metri','time':'secondi'};
+  presets.push({id:presetIdCounter++,type,target:val,
+    label:`0 → ${val} ${names[type]}`,done:false,result:null});
+  document.getElementById('newPresetVal').value='';
+  renderPresets();
+}
+function removePreset(id) {
+  presets=presets.filter(p=>p.id!==id);
+  renderPresets();
+}
+function renderPresets() {
+  const list=document.getElementById('presetList');
+  const icons={'speed':'🏎️','distance':'📏','time':'⏱️'};
+  list.innerHTML=presets.map(p=>`
+    <div class="preset-row ${p.done?'done':''}" id="preset-row-${p.id}">
+      <span class="preset-icon">${icons[p.type]}</span>
+      <span class="preset-name">${p.label}</span>
+      <span class="preset-result" id="preset-res-${p.id}">${p.result||''}</span>
+      ${p.done?'✅':'<button class="btn-preset-del" onclick="removePreset('+p.id+')">✕</button>'}
+    </div>`).join('');
+}
+
+function dStart() {
+  if (presets.length===0) { alert('Aggiungi almeno un preset.'); return; }
+  if (!startGPS()) return;
+  dArmed=true; dRunning=false;
+  dSamples=[]; dDecelStart=null;
+  presets.forEach(p=>{p.done=false;p.result=null;});
+  renderPresets();
+  document.getElementById('dBtnStart').style.display='none';
+  document.getElementById('dBtnStop').style.display='';
+  document.getElementById('dragStatus').classList.add('show');
+  document.getElementById('dragTarget').textContent='in attesa movimento...';
+  dElapsedLoop();
+}
+function dStop() {
+  dArmed=false; dRunning=false;
+  stopGPS();
+  document.getElementById('dBtnStart').style.display='';
+  document.getElementById('dBtnStop').style.display='none';
+  document.getElementById('dragStatus').classList.remove('show');
+}
+function dClear() {
+  dRunCount=0; maxKmh=0;
+  document.getElementById('dDownloadList').innerHTML='';
+  document.getElementById('dEmpty').style.display='block';
+  document.getElementById('maxSpeed').textContent='0';
+  window._dData={};
+  initPresets();
+}
+
+function dOnPosition(kmh, ts) {
+  document.getElementById('speedNum').className='speed-num'+(dRunning?' active':'');
+  if (!dArmed) return;
+
+  // Armed but not yet running — start on any movement
+  if (!dRunning && kmh>0.5) {
+    dRunning=true;
+    dStartTs=ts;
+    dSamples=[{ts,kmh,dist:0}];
+    document.getElementById('dragTarget').textContent=getNextTarget();
+    return;
+  }
+  if (!dRunning) return;
+
+  // Integrate distance (trapezoid)
+  const prev=dSamples[dSamples.length-1];
+  const dt=(ts-prev.ts)/1000;
+  const distDelta=((prev.kmh+kmh)/2)/3.6*dt*1000; // m
+  const totalDist=prev.dist+distDelta;
+  dSamples.push({ts,kmh,dist:totalDist});
+
+  const elapsed=(ts-dStartTs)/1000;
+
+  // Check each undone preset
+  presets.forEach(p=>{
+    if (p.done) return;
+    let hit=false;
+    if (p.type==='speed'    && kmh>=p.target)     hit=true;
+    if (p.type==='distance' && totalDist>=p.target) hit=true;
+    if (p.type==='time'     && elapsed>=p.target)  hit=true;
+    if (hit) {
+      p.done=true;
+      // Interpolate exact crossing
+      const A=dSamples[dSamples.length-2], B=dSamples[dSamples.length-1];
+      let tCross=elapsed, vCross=kmh, dCross=totalDist;
+      if (p.type==='speed' && A && B.kmh!==A.kmh) {
+        const r=(p.target-A.kmh)/(B.kmh-A.kmh);
+        tCross=(A.ts+r*(B.ts-A.ts)-dStartTs)/1000;
+        dCross=A.dist+r*(B.dist-A.dist);
+        vCross=p.target;
       }
-      currentSamples = [{ ts: recordingStartTs, kmh: thresh }];
-      document.getElementById('recBar').classList.add('show');
-      document.getElementById('recThresh').textContent = thresh;
-      document.getElementById('recMax').textContent    = '0';
+      if (p.type==='distance' && A && B.dist!==A.dist) {
+        const r=(p.target-A.dist)/(B.dist-A.dist);
+        tCross=(A.ts+r*(B.ts-A.ts)-dStartTs)/1000;
+        vCross=A.kmh+r*(B.kmh-A.kmh);
+        dCross=p.target;
+      }
+      if (p.type==='time') {
+        tCross=p.target;
+        if (A && B.ts!==A.ts) {
+          const r=(dStartTs+p.target*1000-A.ts)/(B.ts-A.ts);
+          vCross=A.kmh+r*(B.kmh-A.kmh);
+          dCross=A.dist+r*(B.dist-A.dist);
+        }
+      }
+      // Build result string
+      if (p.type==='speed')    p.result=`${tCross.toFixed(3)}s | ${dCross.toFixed(1)}m`;
+      if (p.type==='distance') p.result=`${tCross.toFixed(3)}s | ${vCross.toFixed(1)} km/h`;
+      if (p.type==='time')     p.result=`${vCross.toFixed(1)} km/h | ${dCross.toFixed(1)}m`;
+      p.resultData={time_s:+tCross.toFixed(3),speed_kmh:+vCross.toFixed(2),distance_m:+dCross.toFixed(2)};
     }
-  }
+  });
+  renderPresets();
+  document.getElementById('dragTarget').textContent=getNextTarget();
 
-  if (isRecording) {
-    if (curTs > currentSamples[currentSamples.length - 1].ts) {
-      currentSamples.push({ ts: curTs, kmh: curKmh });
-    }
-    document.getElementById('recMax').textContent = Math.round(maxSpeedSession);
-    if (curKmh < thresh) finaliseRun();
-  }
+  // Deceleration stop: kmh<20 for 2s after movement
+  if (elapsed>2 && kmh<20) {
+    if (!dDecelStart) dDecelStart=ts;
+    else if ((ts-dDecelStart)>=2000) { dFinalize(); return; }
+  } else { dDecelStart=null; }
 
-  prevGpsKmh = curKmh;
-  prevGpsTs  = curTs;
+  // All presets done
+  if (presets.every(p=>p.done)) { dFinalize(); return; }
 }
 
-// ── Finalise: build integer km/h log and export file ─────────────────────────
-function finaliseRun() {
-  isRecording = false;
-  document.getElementById('recBar').classList.remove('show');
-  document.getElementById('elapsedTime').textContent = '—';
-  if (currentSamples.length < 2) return;
-
-  const samples    = currentSamples.slice();
-  const startTs    = recordingStartTs;
-  const logEntries = buildIntegerLog(samples, startTs);
-  if (logEntries.length === 0) return;
-
-  runCount++;
-  const color    = RUN_COLORS[(runCount - 1) % RUN_COLORS.length];
-  const filename = `speedlog_run${runCount}.json`;
-  const json     = buildJSON(logEntries, runCount, samples, startTs);
-  addDownloadItem(runCount, color, filename, json, logEntries);
-  currentSamples = [];
+function getNextTarget() {
+  const next=presets.find(p=>!p.done);
+  if (!next) return 'completato!';
+  const u={'speed':'km/h','distance':'m','time':'s'};
+  return `${next.label} [${u[next.type]}]`;
 }
 
-// ── Build integer km/h crossing log (linear interpolation) ───────────────────
-function buildIntegerLog(samples, startTs) {
-  const peak  = Math.floor(Math.max(...samples.map(s => s.kmh)));
-  const start = Math.ceil(samples[0].kmh);
-  const log   = [];
-  for (let k = start; k <= peak; k++) {
-    for (let i = 0; i < samples.length - 1; i++) {
-      const A = samples[i], B = samples[i+1];
-      if (A.kmh <= k && B.kmh > k && B.kmh > A.kmh) {
-        const r = (k - A.kmh) / (B.kmh - A.kmh);
-        log.push({ kmh: k, time_ms: A.ts + r * (B.ts - A.ts) - startTs });
+function dFinalize() {
+  dArmed=false; dRunning=false;
+  stopGPS();
+  document.getElementById('dBtnStart').style.display='';
+  document.getElementById('dBtnStop').style.display='none';
+  document.getElementById('dragStatus').classList.remove('show');
+  if (dSamples.length<2) return;
+
+  dRunCount++;
+  const color=RUN_COLORS[(dRunCount-1)%RUN_COLORS.length];
+  const fn='speedlog_drag'+dRunCount+'.json';
+  const totalDist=dSamples[dSamples.length-1].dist;
+  const totalTime=(dSamples[dSamples.length-1].ts-dStartTs)/1000;
+
+  const json=JSON.stringify({
+    meta:{type:'drag',run:dRunCount,date:new Date().toISOString(),
+          total_time_s:+totalTime.toFixed(3),total_distance_m:+totalDist.toFixed(2)},
+    presets:presets.map(p=>({name:p.label,type:p.type,target:p.target})),
+    results:presets.map(p=>({
+      preset:p.label,achieved:p.done,
+      time_s:   p.resultData?.time_s    ?? null,
+      speed_kmh:p.resultData?.speed_kmh ?? null,
+      distance_m:p.resultData?.distance_m?? null
+    })),
+    raw_gps:dSamples.map(s=>({
+      elapsed_ms:+(s.ts-dStartTs).toFixed(1),
+      kmh:+s.kmh.toFixed(4),
+      distance_m:+s.dist.toFixed(3)
+    }))
+  },null,2);
+
+  window._dData[dRunCount]={fn,json};
+  document.getElementById('dEmpty').style.display='none';
+
+  const summary=presets.filter(p=>p.done)
+    .map(p=>`${p.label}: ${p.result}`).join(' | ');
+  const card=document.createElement('div');
+  card.className='dl-card';
+  card.innerHTML=`<div class="dl-info">
+    <span class="dl-run" style="color:${color}">DRAG ${dRunCount}</span>
+    <span class="dl-stats" style="white-space:normal">${summary}</span>
+    <span class="dl-file">${fn}</span>
+  </div><button class="btn btn-dl" onclick="dDownload(${dRunCount})">↓ SCARICA</button>`;
+  document.getElementById('dDownloadList').appendChild(card);
+  dSamples=[];
+}
+function dDownload(idx) {
+  const {fn,json}=window._dData[idx];
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([json],{type:'application/json'}));
+  a.download=fn; a.click();
+}
+function dElapsedLoop() {
+  if (!dArmed&&!dRunning) return;
+  if (dRunning&&dStartTs!==null)
+    document.getElementById('dElapsed').textContent=((Date.now()-dStartTs)/1000).toFixed(3)+'s';
+  requestAnimationFrame(dElapsedLoop);
+}
+
+// ── Shared helper ─────────────────────────────────────────
+function buildIntegerLog(samples,startTs) {
+  const peak=Math.floor(Math.max(...samples.map(s=>s.kmh)));
+  const start=Math.ceil(samples[0].kmh);
+  const log=[];
+  for (let k=start;k<=peak;k++) {
+    for (let i=0;i<samples.length-1;i++) {
+      const A=samples[i],B=samples[i+1];
+      if (A.kmh<=k&&B.kmh>k&&B.kmh>A.kmh) {
+        const r=(k-A.kmh)/(B.kmh-A.kmh);
+        log.push({kmh:k,time_ms:A.ts+r*(B.ts-A.ts)-startTs});
         break;
       }
     }
@@ -432,79 +582,9 @@ function buildIntegerLog(samples, startTs) {
   return log;
 }
 
-// ── Build JSON export ─────────────────────────────────────────────────────────
-function buildJSON(logEntries, runIdx, rawSamples, startTs) {
-  return JSON.stringify({
-    meta: {
-      run: runIdx,
-      date: new Date().toISOString(),
-      threshold_kmh: logEntries[0]?.kmh ?? 0,
-      peak_kmh: logEntries[logEntries.length - 1]?.kmh ?? 0,
-      duration_s: +((logEntries[logEntries.length - 1]?.time_ms ?? 0) / 1000).toFixed(3)
-    },
-    // Integer km/h crossings — use these for the chart
-    crossings: logEntries.map(e => ({
-      kmh:     e.kmh,
-      time_s:  +(e.time_ms / 1000).toFixed(3),
-      time_ms: +e.time_ms.toFixed(1)
-    })),
-    // Raw GPS samples — full fidelity for advanced analysis
-    raw_gps: rawSamples.map(s => ({
-      elapsed_ms: +(s.ts - startTs).toFixed(1),
-      kmh:        +s.kmh.toFixed(4)
-    }))
-  }, null, 2);
-}
-
-// ── Add download card to UI ───────────────────────────────────────────────────
-function addDownloadItem(runIdx, color, filename, json, logEntries) {
-  document.getElementById('noRuns').style.display = 'none';
-  const list = document.getElementById('downloadList');
-  const peak = logEntries[logEntries.length - 1];
-  const dur  = (peak.time_ms / 1000).toFixed(2);
-
-  const card = document.createElement('div');
-  card.className = 'dl-card';
-  card.innerHTML = `
-    <div class="dl-info">
-      <span class="dl-run" style="color:${color}">RUN ${runIdx}</span>
-      <span class="dl-stats">${logEntries[0].kmh} → ${peak.kmh} km/h &nbsp;|&nbsp; ${dur}s</span>
-      <span class="dl-file">${filename}</span>
-    </div>
-    <button class="btn btn-dl" onclick="downloadFile('${filename}', ${runIdx})">↓ SCARICA</button>
-  `;
-  list.appendChild(card);
-
-  // Store JSON for download
-  window._runData = window._runData || {};
-  window._runData[runIdx] = { filename, json };
-}
-
-function downloadFile(filename, runIdx) {
-  const { json } = window._runData[runIdx];
-  const blob = new Blob([json], { type: 'application/json' });
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = filename;
-  a.click();
-}
-
-// ── Elapsed loop ──────────────────────────────────────────────────────────────
-function elapsedLoop() {
-  if (!isTracking) return;
-  if (isRecording && recordingStartTs !== null) {
-    const t = Date.now() - recordingStartTs;
-    document.getElementById('elapsedTime').textContent = (t/1000).toFixed(3)+'s';
-  }
-  requestAnimationFrame(elapsedLoop);
-}
-
-function onError(err) {
-  document.getElementById('gpsDot').className     = 'dot';
-  document.getElementById('gpsLabel').textContent = 'ERRORE';
-  console.warn('GPS error', err.code, err.message);
-}
+// ── Init ──────────────────────────────────────────────────
+initPresets();
+setMode('grafico');
 </script>
-
 </body>
 </html>
