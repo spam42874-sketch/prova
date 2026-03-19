@@ -440,7 +440,7 @@ function dOnPosition(kmh, ts) {
   // Integrate distance (trapezoid)
   const prev=dSamples[dSamples.length-1];
   const dt=(ts-prev.ts)/1000;
-  const distDelta=((prev.kmh+kmh)/2)/3.6*dt*1000; // m
+  const distDelta=((prev.kmh+kmh)/2)/3.6*dt; // km/h÷3.6=m/s × dt(s) = m
   const totalDist=prev.dist+distDelta;
   dSamples.push({ts,kmh,dist:totalDist});
 
