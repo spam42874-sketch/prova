@@ -251,8 +251,9 @@ function onPosition(pos) {
     maxKmh=kmh;
     document.getElementById('maxSpeed').textContent=Math.round(maxKmh);
   }
-  if (mode==='grafico') gOnPosition(kmh, ts);
-  else                   dOnPosition(kmh, ts);
+  const wall = Date.now(); // always-reliable wall clock
+  if (mode==='grafico') gOnPosition(kmh, ts, wall);
+  else                   dOnPosition(kmh, wall);
   prevKmh=kmh; prevTs=ts;
 }
 
@@ -423,28 +424,28 @@ function dClear() {
   initPresets();
 }
 
-function dOnPosition(kmh, ts) {
+function dOnPosition(kmh, wall) {
   document.getElementById('speedNum').className='speed-num'+(dRunning?' active':'');
   if (!dArmed) return;
 
   // Armed but not yet running — start on any movement
   if (!dRunning && kmh>0.5) {
     dRunning=true;
-    dStartTs=ts;
-    dSamples=[{ts,kmh,dist:0}];
+    dStartTs=wall;                            // wall clock — always reliable
+    dSamples=[{wall,kmh,dist:0}];
     document.getElementById('dragTarget').textContent=getNextTarget();
     return;
   }
   if (!dRunning) return;
 
-  // Integrate distance (trapezoid)
+  // Integrate distance using wall-clock delta (trapezoid rule)
   const prev=dSamples[dSamples.length-1];
-  const dt=(ts-prev.ts)/1000;
-  const distDelta=((prev.kmh+kmh)/2)/3.6*dt; // km/h÷3.6=m/s × dt(s) = m
+  const dt=Math.min((wall-prev.wall)/1000, 3); // seconds, capped at 3s to ignore stale fixes
+  const distDelta=((prev.kmh+kmh)/2)/3.6*dt;   // avg_m/s × dt_s = metres
   const totalDist=prev.dist+distDelta;
-  dSamples.push({ts,kmh,dist:totalDist});
+  dSamples.push({wall,kmh,dist:totalDist});
 
-  const elapsed=(ts-dStartTs)/1000;
+  const elapsed=(wall-dStartTs)/1000;
 
   // Check each undone preset
   presets.forEach(p=>{
@@ -460,20 +461,20 @@ function dOnPosition(kmh, ts) {
       let tCross=elapsed, vCross=kmh, dCross=totalDist;
       if (p.type==='speed' && A && B.kmh!==A.kmh) {
         const r=(p.target-A.kmh)/(B.kmh-A.kmh);
-        tCross=(A.ts+r*(B.ts-A.ts)-dStartTs)/1000;
+        tCross=(A.wall+r*(B.wall-A.wall)-dStartTs)/1000;
         dCross=A.dist+r*(B.dist-A.dist);
         vCross=p.target;
       }
       if (p.type==='distance' && A && B.dist!==A.dist) {
         const r=(p.target-A.dist)/(B.dist-A.dist);
-        tCross=(A.ts+r*(B.ts-A.ts)-dStartTs)/1000;
+        tCross=(A.wall+r*(B.wall-A.wall)-dStartTs)/1000;
         vCross=A.kmh+r*(B.kmh-A.kmh);
         dCross=p.target;
       }
       if (p.type==='time') {
         tCross=p.target;
         if (A && B.ts!==A.ts) {
-          const r=(dStartTs+p.target*1000-A.ts)/(B.ts-A.ts);
+          const r=(dStartTs+p.target*1000-A.wall)/(B.wall-A.wall);
           vCross=A.kmh+r*(B.kmh-A.kmh);
           dCross=A.dist+r*(B.dist-A.dist);
         }
@@ -490,8 +491,8 @@ function dOnPosition(kmh, ts) {
 
   // Deceleration stop: kmh<20 for 2s after movement
   if (elapsed>2 && kmh<20) {
-    if (!dDecelStart) dDecelStart=ts;
-    else if ((ts-dDecelStart)>=2000) { dFinalize(); return; }
+    if (!dDecelStart) dDecelStart=wall;
+    else if ((wall-dDecelStart)>=2000) { dFinalize(); return; }
   } else { dDecelStart=null; }
 
   // All presets done
@@ -517,7 +518,7 @@ function dFinalize() {
   const color=RUN_COLORS[(dRunCount-1)%RUN_COLORS.length];
   const fn='speedlog_drag'+dRunCount+'.json';
   const totalDist=dSamples[dSamples.length-1].dist;
-  const totalTime=(dSamples[dSamples.length-1].ts-dStartTs)/1000;
+  const totalTime=(dSamples[dSamples.length-1].wall-dStartTs)/1000;
 
   const json=JSON.stringify({
     meta:{type:'drag',run:dRunCount,date:new Date().toISOString(),
@@ -530,7 +531,7 @@ function dFinalize() {
       distance_m:p.resultData?.distance_m?? null
     })),
     raw_gps:dSamples.map(s=>({
-      elapsed_ms:+(s.ts-dStartTs).toFixed(1),
+      elapsed_ms:+(s.wall-dStartTs).toFixed(1),
       kmh:+s.kmh.toFixed(4),
       distance_m:+s.dist.toFixed(3)
     }))
